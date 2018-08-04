@@ -1,33 +1,11 @@
 package ru.cyberbiology.test;
 
 
-import ru.cyberbiology.test.gene.GeneCareAbsolutelyDirection;
-import ru.cyberbiology.test.gene.GeneCareRelativeDirection;
-import ru.cyberbiology.test.gene.GeneChangeDirectionAbsolutely;
-import ru.cyberbiology.test.gene.GeneChangeDirectionRelative;
-import ru.cyberbiology.test.gene.GeneEatAbsoluteDirection;
-import ru.cyberbiology.test.gene.GeneEatRelativeDirection;
-import ru.cyberbiology.test.gene.GeneFlattenedHorizontally;
-import ru.cyberbiology.test.gene.GeneFullAroud;
-import ru.cyberbiology.test.gene.GeneGiveAbsolutelyDirection;
-import ru.cyberbiology.test.gene.GeneGiveRelativeDirection;
-import ru.cyberbiology.test.gene.GeneIsHealthGrow;
-import ru.cyberbiology.test.gene.GeneIsMineralGrow;
-import ru.cyberbiology.test.gene.GeneIsMultiCell;
-import ru.cyberbiology.test.gene.GeneLookRelativeDirection;
-import ru.cyberbiology.test.gene.GeneMineralToEnergy;
-import ru.cyberbiology.test.gene.GeneMutate;
-import ru.cyberbiology.test.gene.GeneMyHealth;
-import ru.cyberbiology.test.gene.GeneMyLevel;
-import ru.cyberbiology.test.gene.GeneMyMineral;
-import ru.cyberbiology.test.gene.GenePhotosynthesis;
-import ru.cyberbiology.test.gene.GeneStepInAbsolutelyDirection;
-import ru.cyberbiology.test.gene.GeneStepInRelativeDirection;
-import ru.cyberbiology.test.gene.GeneCreateBot;
-import ru.cyberbiology.test.gene.GeneCreateCell;
+import ru.cyberbiology.test.gene.*;
 import ru.cyberbiology.test.prototype.IBot;
 import ru.cyberbiology.test.prototype.IWorld;
 import ru.cyberbiology.test.prototype.gene.IBotGeneController;
+
 import java.security.SecureRandom;
 
 
@@ -93,21 +71,17 @@ public class Bot implements IBot, Cloneable {
     //===================          BOT.LIVING                 ======================
     //======= состяние бота, которое отмеченно для каждого бота в массиве bots[] ====================
     /**
-     * место свободно, здесь может быть размещен новый бот
-     */
-    public int LV_FREE = 0;
-    /**
      * бот погиб и представляет из себя органику в подвешенном состоянии
      */
-    public int LV_ORGANIC_HOLD = 1;  
+    public static int LV_ORGANIC_HOLD = 1;  
     /**
      * ораника начинает тонуть, пока не встретит препятствие, после чего остается в подвешенном состоянии(LV_ORGANIC_HOLD)
      */
-    public int LV_ORGANIC_SINK = 2;
+    public static int LV_ORGANIC_SINK = 2;
     /**
      * живой бот
      */
-    public int LV_ALIVE = 3;  //
+    public static int LV_ALIVE = 3;  //
     
     /**
      * Поля нужны для сериализации ботов
@@ -143,9 +117,13 @@ public class Bot implements IBot, Cloneable {
     	{
     		botMove(this, 5, 1);
     	}*/
-    	if (alive == LV_FREE || alive == LV_ORGANIC_HOLD || alive == LV_ORGANIC_SINK)
+    	if (alive == LV_ORGANIC_HOLD || alive == LV_ORGANIC_SINK)
 		  {
 			botMove(this, 5, 1);
+            health-=world.sunEnergy;
+			if (health < -100) {
+			    deleteBot(this);
+            }
 		    	return;   //Это труп - выходим!
 		  }
 
@@ -573,14 +551,8 @@ public class Bot implements IBot, Cloneable {
         } else {
             t = 2;
         }
-        int a = 0;
-        if (bot.mprev != null) {
-            a = a + 4;
-        }
-        if (bot.mnext != null) {
-            a = a + 4;
-        }
-        int hlt = a + 1 * (11 - (15 * bot.y / world.height) + t); // формула вычисления энергии ============================= SEZON!!!!!!!!!!
+        int hlt = (int)(world.sunEnergy * ((double)world.height / (bot.y + 1))) + t;
+        // формула вычисления энергии ============================= SEZON!!!!!!!!!!
 //        System.out.println(world.generation + ": " + bot.health + " + " + hlt);
         if (hlt > 0) {
             bot.health = bot.health + hlt;   // прибавляем полученную энергия к энергии бота
@@ -667,14 +639,14 @@ public class Bot implements IBot, Cloneable {
             return 3;
         }
         Bot bot1 = world.getBot(xt, yt);
-        if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
+        if (bot1 == null) {  // если клетка пустая возвращаем 2
             return 2;
         }
         // осталось 2 варианта: ограника или бот
         else if (bot1.alive <= LV_ORGANIC_SINK) {   // если там оказалась органика
             deleteBot(bot1);                           // то удаляем её из списков
-            bot.health = bot.health + 100; //здоровье увеличилось на 100
-            goRed(this, 100);                                     // бот покраснел
+            bot.health = bot.health + bot1.health; //здоровье увеличилось на 100
+            goRed(this, bot1.health);                                     // бот покраснел
             return 4;                                               // возвращаем 4
         }
         //--------- дошли до сюда, значит впереди живой бот -------------------
@@ -792,14 +764,18 @@ public class Bot implements IBot, Cloneable {
             xt = xFromVektorA(bot, direction);
             yt = yFromVektorA(bot, direction);
         }
+        
+        Bot bot1;
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
-        } else if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
-            return 2;
-        } else if (world.getBot(xt, yt).alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
-            return 4;
+        } else {
+            bot1= world.getBot(xt, yt);
+            if (bot1 == null) {  // если клетка пустая возвращаем 2
+                return 2;
+            } else if (bot1.alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
+                return 4;
+            }
         }
-        Bot bot1 = world.getBot(xt, yt);
         //------- если мы здесь, то в данном направлении живой ----------
         int hlt0 = bot.health;         // определим количество энергии и минералов
         int hlt1 = bot1.health;  // у бота и его соседа
@@ -838,14 +814,17 @@ public class Bot implements IBot, Cloneable {
             xt = xFromVektorA(bot, direction);
             yt = yFromVektorA(bot, direction);
         }
+        Bot bot1 ;
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
-        } else if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
-            return 2;
-        } else if (world.getBot(xt, yt).alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
-            return 4;
+        } else {
+            bot1 =  world.getBot(xt, yt);
+            if (bot1 == null) {  // если клетка пустая возвращаем 2
+                return 2;
+            } else if (bot1.alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
+                return 4;
+            }
         }
-        Bot bot1 = world.getBot(xt, yt);
         //------- если мы здесь, то в данном направлении живой ----------
         int hlt0 = bot.health;  // бот отдает четверть своей энергии
         int hlt = hlt0 / 4;

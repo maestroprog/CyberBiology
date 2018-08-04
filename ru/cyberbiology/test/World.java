@@ -7,13 +7,8 @@ import ru.cyberbiology.test.prototype.record.IRecordManager;
 import ru.cyberbiology.test.record.v0.PlaybackManager;
 import ru.cyberbiology.test.record.v0.RecordManager;
 import ru.cyberbiology.test.util.ProjectProperties;
-import sun.awt.Mutex;
 
 import java.io.File;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
 
 public class World implements IWorld
 {
@@ -29,13 +24,12 @@ public class World implements IWorld
 	public int width;
 	public int height;
 
-	public Bot[] bots;
-	public List<Bot> botAddQueue;
-	public List<Bot> botDelQueue;
-	public List<Bot> botList;
+	public ListMatrix<Bot> bots;
 	public int generation;
 	public int population;
 	public int organic;
+	public int energy;
+	public int sunEnergy;
 
 	boolean started;
 	Painter thread;
@@ -59,22 +53,18 @@ public class World implements IWorld
 	{
 		this.width = width;
 		this.height = height;
-		this.bots = new Bot[width * height];
-		this.botAddQueue = new ArrayList<>();
-		this.botDelQueue = new ArrayList<>();
-		this.botList = new ArrayList<>();
+		this.bots = new ListMatrix<>(new Bot[width * height], width, height);
 	}
 	
 	public void addBot(Bot bot)
 	{
 		this.setBot(bot);
-		this.botAddQueue.add(bot);
 	}
 	
 	@Override
 	public void setBot(Bot bot)
 	{
-		this.bots[bot.y * width + bot.x] = bot;
+		this.bots.set(bot, bot.x, bot.y);
 	}
 
 	public void paint()
@@ -84,14 +74,12 @@ public class World implements IWorld
 	
 	void unsetBot(Bot bot)
 	{
-		this.bots[bot.y * width + bot.x] = null;
+		this.bots.set(null, bot.x, bot.y);
 	}
 
 	void clearBot(Bot bot)
 	{
 		this.unsetBot(bot);
-		this.botAddQueue.remove(bot);
-		this.botDelQueue.add(bot);
 	}
 
 	@Override
@@ -135,7 +123,7 @@ public class World implements IWorld
 							// заканчивает работу
 			while (started)
 			{
-
+				int calc_energy = 0;
 				boolean rec = recorder.isRecording(); // запоминаем флаг
 														// "записывать" на
 														// полную итерацию кадра
@@ -144,16 +132,17 @@ public class World implements IWorld
 					recorder.startFrame();
 				}
 				
-				synchronized (this) {
-					world.botList.addAll(world.botAddQueue);
-					world.botList.removeAll(world.botDelQueue);
-				}
-				world.botAddQueue.clear();
-				world.botDelQueue.clear();
-				
 				// обновляем матрицу
-				for (Bot bot : world.botList) {
+				for (Bot bot : world.bots.toArray()) {
+					if (bot == null) {
+						continue;
+					}
 					bot.step(); // выполняем шаг бота
+					if (bot.alive <= Bot.LV_ORGANIC_SINK) {
+						calc_energy += bot.health;
+					} else {
+						calc_energy += bot.mineral * 4 + bot.health;
+					}
 					if (rec) {
 						// вызываем обработчика записи бота
 						recorder.writeBot(bot, bot.x, bot.y);
@@ -165,6 +154,8 @@ public class World implements IWorld
 				}
 				generation++;
 				// sleep(); // пауза между ходами, если надо уменьшить скорость
+				energy = calc_energy;
+				sunEnergy = (int)(((double)world.population / Math.max(1, (double)world.energy / 999)) * 15);
 			}
 			paint();// если запаузили рисуем актуальную картинку
 			started = false;// Закончили работу
@@ -261,12 +252,12 @@ public class World implements IWorld
 
 	public Bot getBot(int botX, int botY)
 	{
-		return this.bots[botY * width + botX];
+		return this.bots.get(botX, botY);
 	}
 	
 	public boolean hasBot(int botX, int botY)
 	{
-		return this.bots[botY * width + botX] != null;
+		return this.bots.get(botX, botY) != null;
 	}
 
 	@Override
@@ -299,7 +290,7 @@ public class World implements IWorld
 	public Bot[][] getWorldArray()
 	{
 		Bot[][] matrix = new Bot[width][height];
-		for (Bot bot : bots) {
+		for (Bot bot : bots.toArray()) {
 			matrix[bot.x][bot.y] = bot;
 		}
 		return matrix;

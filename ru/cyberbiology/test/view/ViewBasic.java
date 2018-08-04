@@ -34,7 +34,10 @@ public class ViewBasic implements IView
 
         world.population = 0;
         world.organic = 0;
-		for (Bot bot: world.botList) {
+		for (Bot bot: world.bots.toArray()) {
+			if (bot == null) {
+				continue;
+			}
             int x = bot.x;
             int y = bot.y;
             if ((bot.alive == 1) || (bot.alive == 2)) {

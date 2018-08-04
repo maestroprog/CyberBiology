@@ -55,6 +55,7 @@ public class MainWindow extends JFrame implements IWindow
     public JLabel generationLabel = new JLabel(" Generation: 0 ");
     public JLabel populationLabel = new JLabel(" Population: 0 ");
     public JLabel organicLabel = new JLabel(" Organic: 0 ");
+    public JLabel sunEnergyLabel = new JLabel(" Sun energy: 0 ");
     
     public JLabel recorderBufferLabel = new JLabel("");
     public JLabel memoryLabel = new JLabel("");
@@ -123,6 +124,10 @@ public class MainWindow extends JFrame implements IWindow
         organicLabel.setPreferredSize(new Dimension(140, 18));
         organicLabel.setBorder(BorderFactory.createLoweredBevelBorder());
         statusPanel.add(organicLabel);
+        
+        sunEnergyLabel.setPreferredSize(new Dimension(140,18));
+        sunEnergyLabel.setBorder(BorderFactory.createLoweredBevelBorder());
+        statusPanel.add(sunEnergyLabel);
 
         memoryLabel.setPreferredSize(new Dimension(140, 18));
         memoryLabel.setBorder(BorderFactory.createLoweredBevelBorder());
@@ -146,6 +151,10 @@ public class MainWindow extends JFrame implements IWindow
         
         JMenu fileMenu = new JMenu("File");
          
+        JMenuItem incraseSunKItem = new JMenuItem("Вспышка на солнце");
+        fileMenu.add(incraseSunKItem);
+        incraseSunKItem.addActionListener((actionEvent) -> world.sunEnergy += 100500);
+        
         runItem = new JMenuItem("Запустить");
         fileMenu.add(runItem);
         runItem.addActionListener(new ActionListener()
@@ -482,6 +491,7 @@ public class MainWindow extends JFrame implements IWindow
         generationLabel.setText(" Generation: " + String.valueOf(world.generation));
         populationLabel.setText(" Population: " + String.valueOf(world.population));
         organicLabel.setText(" Organic: " + String.valueOf(world.organic));
+		sunEnergyLabel.setText(" Sun energy: " + String.valueOf(world.sunEnergy));
         recorderBufferLabel.setText(" Buffer: " + String.valueOf(world.recorder.getBufferSize()));
         
         Runtime runtime = Runtime.getRuntime();
