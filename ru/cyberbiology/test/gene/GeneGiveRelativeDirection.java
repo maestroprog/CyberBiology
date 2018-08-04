@@ -25,6 +25,7 @@ public class GeneGiveRelativeDirection extends ABotGeneController
         bot.indirectIncCmdAddress(bot.give(drct, 0)); // меняем адрес текущей команды
         // в зависимости от того, что было в этом направлении
         // стена - 2 пусто - 3 органика - 4 удачно - 5
+		bot.incCommandAddress(1);
         return false;
 	}
 	public String getDescription(IBot bot, int i)

@@ -10,31 +10,33 @@ import ru.cyberbiology.test.util.ProjectProperties;
 
 import java.io.File;
 
-public class World implements IWorld
-{
+public class World implements IWorld {
 	public World world;
 	public IWindow window;
 	
 	PlaybackManager playback;
 	IRecordManager recorder;
-
-	public static final int BOTW = 4;
-	public static final int BOTH = 4;
-
+	
+	public static final int BOTW = 2;
+	public static final int BOTH = 2;
+	
 	public int width;
 	public int height;
-
+	
 	public ListMatrix<Bot> bots;
 	public int generation;
 	public int population;
 	public int organic;
 	public int energy;
+	public boolean lockSun = false;
 	public int sunEnergy;
-
+	public int allEnergy;
+	public int diffEnergy;
+	
 	boolean started;
 	Painter thread;
-	protected World(IWindow win)
-	{
+	
+	protected World(IWindow win) {
 		world = this;
 		window = win;
 		population = 0;
@@ -42,91 +44,77 @@ public class World implements IWorld
 		organic = 0;
 		recorder = new RecordManager(this);
 	}
-	public World(IWindow win, int width, int height)
-	{
+	
+	public World(IWindow win, int width, int height) {
 		this(win);
 		this.setSize(width, height);
 	}
-
+	
 	@Override
-	public void setSize(int width, int height)
-	{
+	public void setSize(int width, int height) {
 		this.width = width;
 		this.height = height;
 		this.bots = new ListMatrix<>(new Bot[width * height], width, height);
 	}
 	
-	public void addBot(Bot bot)
-	{
+	public void addBot(Bot bot) {
 		this.setBot(bot);
 	}
 	
 	@Override
-	public void setBot(Bot bot)
-	{
+	public void setBot(Bot bot) {
 		this.bots.set(bot, bot.x, bot.y);
 	}
-
-	public void paint()
-	{
+	
+	public void paint() {
 		window.paint();
 	}
 	
-	void unsetBot(Bot bot)
-	{
+	void unsetBot(Bot bot) {
 		this.bots.set(null, bot.x, bot.y);
 	}
-
-	void clearBot(Bot bot)
-	{
+	
+	void clearBot(Bot bot) {
 		this.unsetBot(bot);
 	}
-
+	
 	@Override
-	public ProjectProperties getProperties()
-	{
+	public ProjectProperties getProperties() {
 		return window.getProperties();
 	}
-	class Painter extends Thread
-	{
-		private final Worker worker;
-		
+	
+	class Painter extends Thread {
 		Painter(Worker worker) {
-			this.worker = worker;
 			worker.start();
 		}
 		
-		public void run()
-		{
-			while (true)
-			{
+		public void run() {
+			while (started) {
 				try {
 					sleep(33);
-				} catch (InterruptedException e){
+				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-				synchronized (worker) {
-					try {
-						paint();
-					}catch (Throwable e){
-						e.printStackTrace();
-					}
+				try {
+					paint();
+				} catch (Throwable e) {
+					e.printStackTrace();
 				}
 			}
 		}
 	}
-	class Worker extends Thread
-	{
-		public void run()
-		{
+	
+	class Worker extends Thread {
+		public void run() {
+			allEnergy = width * height * 999;
+			double qenergy = (double)allEnergy / 15.0;
 			started = true;// Флаг работы потока, если установить в false поток
-							// заканчивает работу
-			while (started)
-			{
+			// заканчивает работу
+			while (started) {
 				int calc_energy = 0;
 				boolean rec = recorder.isRecording(); // запоминаем флаг
-														// "записывать" на
-														// полную итерацию кадра
+				// "записывать" на
+				// полную итерацию кадра
 				if (rec)// вызываем обработчика "старт кадра"
 				{
 					recorder.startFrame();
@@ -155,19 +143,23 @@ public class World implements IWorld
 				generation++;
 				// sleep(); // пауза между ходами, если надо уменьшить скорость
 				energy = calc_energy;
-				sunEnergy = (int)(((double)world.population / Math.max(1, (double)world.energy / 999)) * 15);
+				diffEnergy = allEnergy - calc_energy;
+				if (lockSun) {
+					sunEnergy = 0;
+				} else {
+					sunEnergy = (int) ((double) (allEnergy - calc_energy) / qenergy / 2);
+				}
 			}
 			paint();// если запаузили рисуем актуальную картинку
 			started = false;// Закончили работу
 		}
 	}
-
-	public void generateAdam()
-	{
+	
+	public void generateAdam() {
 		// ========== 1 ==============
 		// бот номер 1 - это уже реальный бот
 		Bot bot = new Bot(this);
-
+		
 		bot.adr = 0;
 		bot.x = width / 2; // координаты бота
 		bot.y = height / 2;
@@ -179,35 +171,29 @@ public class World implements IWorld
 		bot.c_green = 170;
 		bot.direction = 5; // направление
 		bot.mprev = null; // бот не входит в многоклеточные цепочки, поэтому
-							// ссылки
+		// ссылки
 		bot.mnext = null; // на предыдущего, следующего в многоклеточной цепочке
-							// пусты
-		for (int i = 0; i < IBot.MIND_SIZE; i++)
-		{ // заполняем геном командой 25 - фотосинтез
+		// пусты
+		for (int i = 0; i < IBot.MIND_SIZE-1; i++) { // заполняем геном командой 25 - фотосинтез
 			bot.mind[i] = 25;
 		}
-
+		bot.mind[IBot.MIND_SIZE-1] = 40;
+		
 		this.addBot(bot); // даём ссылку на бота в массиве world[]
-
+		
 		return;
 	}
-	public void restoreLinks()
-	{
-		for (int y = 0; y < height; y++)
-		{
-			for (int x = 0; x < width; x++)
-			{
-				if (hasBot(x, y))
-				{
+	
+	public void restoreLinks() {
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				if (hasBot(x, y)) {
 					Bot bot = getBot(x, y);
-					if (bot.alive == 3)
-					{
-						if(bot.mprevX>-1 && bot.mprevY>-1)
-						{
+					if (bot.alive == 3) {
+						if (bot.mprevX > -1 && bot.mprevY > -1) {
 							bot.mprev = getBot(bot.mprevX, bot.mprevY);
 						}
-						if(bot.mnextX>-1 && bot.mnextY>-1)
-						{
+						if (bot.mnextX > -1 && bot.mnextY > -1) {
 							bot.mnext = getBot(bot.mnextX, bot.mnextY);
 						}
 					}
@@ -215,65 +201,54 @@ public class World implements IWorld
 			}
 		}
 	}
-	public boolean started()
-	{
+	
+	public boolean started() {
 		return this.thread != null;
 	}
-
-	public void start()
-	{
-		if (!this.started())
-		{
+	
+	public void start() {
+		if (!this.started()) {
 			this.thread = new Painter(new Worker());
 			this.thread.start();
 		}
 	}
-
-	public void stop()
-	{
+	
+	public void stop() {
 		started = false;
 		this.thread = null;
 	}
-
-	public boolean isRecording()
-	{
+	
+	public boolean isRecording() {
 		return this.recorder.isRecording();
 	}
-
-	public void startRecording()
-	{
+	
+	public void startRecording() {
 		this.recorder.startRecording();
 	}
-
-	public boolean stopRecording()
-	{
+	
+	public boolean stopRecording() {
 		return this.recorder.stopRecording();
 	}
-
-	public Bot getBot(int botX, int botY)
-	{
+	
+	public Bot getBot(int botX, int botY) {
 		return this.bots.get(botX, botY);
 	}
 	
-	public boolean hasBot(int botX, int botY)
-	{
+	public boolean hasBot(int botX, int botY) {
 		return this.bots.get(botX, botY) != null;
 	}
-
+	
 	@Override
-	public int getWidth()
-	{
+	public int getWidth() {
 		return width;
 	}
-
+	
 	@Override
-	public int getHeight()
-	{
+	public int getHeight() {
 		return height;
 	}
-
-	public boolean haveRecord()
-	{
+	
+	public boolean haveRecord() {
 		return this.recorder.haveRecord();
 	}
 	/*
@@ -281,22 +256,21 @@ public class World implements IWorld
 	{
 		this.recorder.deleteRecord();
 	}*/
-
-	public void makeSnapShot()
-	{
+	
+	public void makeSnapShot() {
 		this.recorder.makeSnapShot();
 	}
+	
 	@Override
-	public Bot[][] getWorldArray()
-	{
+	public Bot[][] getWorldArray() {
 		Bot[][] matrix = new Bot[width][height];
 		for (Bot bot : bots.toArray()) {
 			matrix[bot.x][bot.y] = bot;
 		}
 		return matrix;
 	}
-	public void openFile(File file)
-	{
+	
+	public void openFile(File file) {
 		playback = new PlaybackManager(this, file);
 	}
 }

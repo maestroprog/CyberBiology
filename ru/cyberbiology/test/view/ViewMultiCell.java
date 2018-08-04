@@ -48,21 +48,21 @@ public class ViewMultiCell implements IView
 				g.fillRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
 				world.organic++;
 			} else if (bot.alive == 3) {
-				g.setColor(Color.BLACK);
-				g.drawRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
+//				g.setColor(Color.BLACK);
+//				g.drawRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
 				switch (bot.isMulti()) {
 
 					case 1:// - есть MPREV,
 						g.setColor(Color.MAGENTA);
-						g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
+						g.fillRect(x * World.BOTW , y * World.BOTH , World.BOTW , World.BOTH );
 						break;
 					case 2:// - есть MNEXT,
 						g.setColor(Color.BLACK);
-						g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
+						g.fillRect(x * World.BOTW , y * World.BOTH , World.BOTW , World.BOTH );
 						break;
 					case 3:// есть MPREV и MNEXT
 						g.setColor(Color.MAGENTA);
-						g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
+						g.fillRect(x * World.BOTW , y * World.BOTH , World.BOTW , World.BOTH );
 						break;
 					default:
 						int green = (int) (bot.c_green - ((bot.c_green * bot.health) / 2000));
@@ -84,7 +84,7 @@ public class ViewMultiCell implements IView
 							red = 255;
 						}
 						g.setColor(new Color(red, green, blue));
-						g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
+						g.fillRect(x * World.BOTW , y * World.BOTH , World.BOTW , World.BOTH);
 						break;
 				}
 

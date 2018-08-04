@@ -62,11 +62,13 @@ public class Bot implements IBot, Cloneable {
 	    geneController[46]	= new GeneIsMultiCell();//46  многоклеточный
 	    geneController[47]	= new GeneMineralToEnergy();//47  преобразовать минералы в энерию
 	    geneController[48]	= new GeneMutate();//48  мутировать
+        geneController[49]  = new GeneCommand();//49 командовать соседями
+        geneController[60]  = new GeneDie();//60 превратиться в органику
 	    
 	    
     }
     
-    public byte[] mind = new byte[MIND_SIZE];                // геном бота содержит 64 команды
+    public int[] mind = new int[MIND_SIZE];                // геном бота содержит 64 команды
     
     //===================          BOT.LIVING                 ======================
     //======= состяние бота, которое отмеченно для каждого бота в массиве bots[] ====================
@@ -120,18 +122,28 @@ public class Bot implements IBot, Cloneable {
     	if (alive == LV_ORGANIC_HOLD || alive == LV_ORGANIC_SINK)
 		  {
 			botMove(this, 5, 1);
-            health-=world.sunEnergy;
-			if (health < -100) {
+              health -= Math.abs(world.sunEnergy) + 1;
+			if (health <= -100) {
 			    deleteBot(this);
             }
 		    	return;   //Это труп - выходим!
 		  }
 
-        IBotGeneController cont	= null;
-        
-        for (int cyc = 0; cyc < MIND_SIZE/4; cyc++)
+        IBotGeneController cont;
+    
+        Integer prevAdr = null;
+        int c = 0;
+        for (; ;)
         {//15
+            if (prevAdr != null && prevAdr == adr) {
+                c++;
+                if (c > 64) {
+                    System.out.println("Зависон detected, cmd " + mind[adr]);
+                    System.exit(1);
+                }
+            }
             int command = mind[adr];  // текущая команда
+            prevAdr=adr;
             
             // Получаем обработчика команды
             cont	= geneController[command];
@@ -217,26 +229,26 @@ public class Bot implements IBot, Cloneable {
             //??????????????????????????????????????????????
             //... проверим уровень энергии у бота, возможно пришла пора помереть или родить
             // Вопрос стоит ли так делать, родждение прописано в генных командах
-            if (health > 999) {    // если энергии больше 999, то плодим нового бота
+            /*if (health > 499) {    // если энергии больше 499, то плодим нового бота
                 if ((a == 1) || (a == 2)) {
                     botMulti(this); // если бот был крайним в цепочке, то его потомок входит в состав цепочки
                 } else {
                     botDouble(this); // если бот был свободным или находился внутри цепочки
                     				// то его потомок рождается свободным
                 }
-            }
+            }*/
             health =  health - 3;   // каждый ход отнимает 3 единички здоровья(энегрии)
             if (health < 1) {       // если энергии стало меньше 1
                 bot2Organic(this);  // то время умирать, превращаясь в огранику
                 return;            // и передаем управление к следующему боту
             }
             // если бот находится на глубине ниже 48 уровня
-            // то он автоматом накапливает минералы, но не более 999
+            // то он автоматом накапливает минералы, но не более 499
             if (y > world.height / 2) {
                 mineral = mineral + 1;
                 if (y > world.height / 6 * 4) { mineral = mineral + 1; }
                 if (y > world.height / 6 * 5) { mineral = mineral + 1; }
-                if (mineral > 999) { mineral = 999; }
+                if (mineral > 499) { mineral = 499; }
             }
         }
     }
@@ -552,6 +564,9 @@ public class Bot implements IBot, Cloneable {
             t = 2;
         }
         int hlt = (int)(world.sunEnergy * ((double)world.height / (bot.y + 1))) + t;
+        if (bot.health + hlt > 499) {
+            hlt -= (bot.health + hlt) - 499;
+        }
         // формула вычисления энергии ============================= SEZON!!!!!!!!!!
 //        System.out.println(world.generation + ": " + bot.health + " + " + hlt);
         if (hlt > 0) {
@@ -567,6 +582,7 @@ public class Bot implements IBot, Cloneable {
      * @param bot
      */
     public void botMineral2Energy(Bot bot) {
+        //TODO стабилизировать минералы
         if (bot.mineral > 100) {   // максимальное количество минералов, которые можно преобразовать в энергию = 100
             bot.mineral = bot.mineral - 100;
             bot.health = bot.health + 400; // 1 минерал = 4 энергии
@@ -836,8 +852,8 @@ public class Bot implements IBot, Cloneable {
             int min = min0 / 4;
             bot.mineral = min0 - min;
             bot1.mineral = bot1.mineral + min;
-            if (bot1.mineral > 999) {
-                bot1.mineral = 999;
+            if (bot1.mineral > 499) {
+                bot1.mineral = 499;
             }
         }
         return 5;
@@ -891,13 +907,16 @@ public class Bot implements IBot, Cloneable {
     
     @Override
 	public void mutate() {
-		byte bytes[] = new byte[2];
-		secureRandom.nextBytes(bytes);
-		byte ma = (byte) (int) ((bytes[0] & 0b01111111) % IBot.MIND_SIZE);
-		byte mc = (byte) (int) ((bytes[1] & 0b01111111) % IBot.MIND_SIZE);
+        int ma = secureRandom.nextInt(IBot.MIND_SIZE-1)+1;
+        int mc = secureRandom.nextInt(IBot.MIND_SIZE-1)+1;
 //            byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63
 //            byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
 		mind[ma] = mc;
+    }
+    
+    @Override
+    public void die() {
+        this.health=0;
     }
     
     Bot clone(int x, int y) throws CloneNotSupportedException {
@@ -905,7 +924,7 @@ public class Bot implements IBot, Cloneable {
 
         cloned.x = x;
         cloned.y = y;
-        cloned.mind[(int) (Math.random() * IBot.MIND_SIZE)] = (byte) (Math.random() * IBot.MIND_SIZE);
+        cloned.mind[(int) (Math.random() * IBot.MIND_SIZE)] = (int) (Math.random() * IBot.MIND_SIZE);
 
         return cloned;
     }
@@ -1014,7 +1033,7 @@ public class Bot implements IBot, Cloneable {
         for (int i = 0; i < MIND_SIZE; i++) {
             if (bot0.mind[i] != bot1.mind[i]) {
                 dif = dif + 1;
-                if (dif == 2) {
+                if (dif == 5) {
                     return 0;
                 } // если несовпадений в генеме больше 1
             }                               // то боты не родственики
@@ -1169,7 +1188,15 @@ public class Bot implements IBot, Cloneable {
 	{
 		return botSeeBots(this, drct, i);
 	}
-	@Override
+    
+    @Override
+    public void command(int drct, int command) {
+        int xt = xFromVektorR(this, drct);
+        int yt = yFromVektorR(this, drct);
+        this.world.getBot(xt, yt).adr = command;
+    }
+    
+    @Override
 	public int care(int drct, int i)
 	{
 		return botCare(this, drct, i);
@@ -1217,7 +1244,7 @@ public class Bot implements IBot, Cloneable {
 		botMineral2Energy(this);
 	}
 	@Override
-	public void setMind(byte ma, byte mc)
+	public void setMind(int ma, int mc)
 	{
 		this.mind[ma]=mc;
 	}

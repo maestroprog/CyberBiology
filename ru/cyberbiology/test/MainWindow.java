@@ -1,41 +1,7 @@
 package ru.cyberbiology.test;
 
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Random;
-
-import javax.swing.BorderFactory;
-import javax.swing.JComponent;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.ToolTipManager;
-// Тест
-// Основной класс программы.
-import javax.swing.WindowConstants;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import ru.cyberbiology.test.gene.GeneMutate;
-
 import ru.cyberbiology.test.prototype.IWindow;
 import ru.cyberbiology.test.prototype.gene.IBotGeneController;
 import ru.cyberbiology.test.prototype.view.IView;
@@ -43,12 +9,42 @@ import ru.cyberbiology.test.util.ProjectProperties;
 import ru.cyberbiology.test.view.ViewBasic;
 import ru.cyberbiology.test.view.ViewMultiCell;
 
-public class MainWindow extends JFrame implements IWindow
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.Random;
+
+// Тест
+// Основной класс программы.
+
+public class MainWindow extends JFrame implements IWindow,KeyListener
 {
 	JMenuItem runItem;
     JMenuItem mutateItem;
+    
+	public void keyPressed(KeyEvent e) {
+		
+		int key = e.getKeyCode();
+		
+		if(key == KeyEvent.VK_S){
+			world.lockSun=false;
+		} else if (key == KeyEvent.VK_D) {
+			world.lockSun=true;
+		}
+	}
 	
-	 public static MainWindow window;
+	@Override
+	public void keyTyped(KeyEvent e) {
+		
+	}
+	
+	@Override
+	public void keyReleased(KeyEvent e) {
+		
+	}
+	
+	public static MainWindow window;
 	
 	public static final int BOTW	= World.BOTW;
 	public static final int BOTH	= World.BOTH;
@@ -90,17 +86,21 @@ public class MainWindow extends JFrame implements IWindow
     ProjectProperties properties;
     public MainWindow()
     {
+    	
+    	addKeyListener(this);
     	window	= this;
 		properties	= new ProjectProperties("properties.xml");
 
 		
         setTitle("CyberBiologyTest 1.0.0");
-        setSize(new Dimension(640, 480));
-        Dimension sSize = Toolkit.getDefaultToolkit().getScreenSize(), fSize = getSize();
-        if (fSize.height > sSize.height) { fSize.height = sSize.height; }
-        if (fSize.width  > sSize.width)  { fSize.width = sSize.width; }
-        //setLocation((sSize.width - fSize.width)/2, (sSize.height - fSize.height)/2);
-        setSize(new Dimension(sSize.width, sSize.height));
+		Dimension dimension = new Dimension(640, 480);
+		setSize(dimension);
+//        Dimension sSize = Toolkit.getDefaultToolkit().getScreenSize(), fSize = getSize();
+//		Dimension sSize = dimension, fSize = dimension;
+//        if (fSize.height > sSize.height) { fSize.height = sSize.height; }
+//        if (fSize.width  > sSize.width)  { fSize.width = sSize.width; }
+//        setLocation((sSize.width - fSize.width)/2, (sSize.height - fSize.height)/2);
+//        setSize(new Dimension(sSize.width, sSize.height));
         
         
         setDefaultCloseOperation (WindowConstants.EXIT_ON_CLOSE);
@@ -108,6 +108,7 @@ public class MainWindow extends JFrame implements IWindow
         Container container = getContentPane();
 
         container.setLayout(new BorderLayout());// у этого лейаута приятная особенность - центральная часть растягивается автоматически
+		paintPanel.setSize(dimension);
         container.add(paintPanel, BorderLayout.CENTER);// добавляем нашу карту в центр
         //container.add(paintPanel);
         
@@ -171,7 +172,7 @@ public class MainWindow extends JFrame implements IWindow
                 	int height = paintPanel.getHeight()/BOTH;// Боты 4 пикселя?
 	            	world = new World(window,width,height);
 	            	world.generateAdam();
-	                paint();
+//	                paint();
             	}
             	if(!world.started())
             	{
@@ -196,6 +197,13 @@ public class MainWindow extends JFrame implements IWindow
             public void actionPerformed(ActionEvent e) {
                 // мутацию проводим при отключенном мире
                 world.stop();
+                while (world.started) {
+					try {
+						Thread.sleep(33);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+				}
 
                 // получить список живых ботов
                 ArrayList<Bot> aliveBots = new ArrayList();
@@ -222,8 +230,10 @@ public class MainWindow extends JFrame implements IWindow
                     mutagen.onGene(bot);
                     //System.out.println("Mutating " + bot);
                 }
-
-                world.start();
+	
+				if (!world.started){
+					world.start();
+				}
             }
         });
 
@@ -281,15 +291,15 @@ public class MainWindow extends JFrame implements IWindow
             	}
             }
         });
-        /*
-        saveItem = new JMenuItem("Сохранить запись");
+        
+        /*saveItem = new JMenuItem("Сохранить запись");
         fileMenu.add(saveItem);
         saveItem.setEnabled(false);
         saveItem.addActionListener(new ActionListener()
         {           
             public void actionPerformed(ActionEvent e)
             {
-            	/ *FileNameExtensionFilter filter = new FileNameExtensionFilter("*.cb.zip","*.*");
+            	/FileNameExtensionFilter filter = new FileNameExtensionFilter("*.cb.zip","*.*");
                 JFileChooser fc = new JFileChooser();
                 fc.setFileFilter(filter);
                 if (fc.showSaveDialog(window) == JFileChooser.APPROVE_OPTION)
@@ -298,15 +308,15 @@ public class MainWindow extends JFrame implements IWindow
                 	saveItem.setEnabled(false);
                 	deleteItem.setEnabled(false);
                 	recordItem.setEnabled(true);
-                } * /
+                } 
             	world.saveRecord(new File("/Users/Kolya/Documents/workspace/CyberBiologyTest/save/test.cb.zip"));
             	saveItem.setEnabled(false);
             	deleteItem.setEnabled(false);
             	recordItem.setEnabled(true);
             }           
         });
-        */
-        /*
+        
+        
         deleteItem = new JMenuItem("Удалить запись");
         fileMenu.add(deleteItem);
         deleteItem.setEnabled(false);
@@ -321,7 +331,7 @@ public class MainWindow extends JFrame implements IWindow
             	recordItem.setEnabled(true);
             }           
         });*/
-        /**/
+        
         JMenuItem openItem = new JMenuItem("Открыть плеер");
         fileMenu.add(openItem);
         openItem.addActionListener(new ActionListener()
@@ -401,9 +411,11 @@ public class MainWindow extends JFrame implements IWindow
         this.setJMenuBar(menuBar);
         
         view = new ViewBasic();
-        this.pack();
+//        this.pack();
         this.setVisible(true);
-        setExtendedState(MAXIMIZED_BOTH);
+//        setExtendedState(NORMAL);
+        
+//        setExtendedState(MAXIMIZED_BOTH);
         
         String tmp = this.getFileDirectory();
         if(tmp==null||tmp.length()==0)

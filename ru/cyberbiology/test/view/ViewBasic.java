@@ -45,8 +45,8 @@ public class ViewBasic implements IView
                 g.fillRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
                 world.organic++;
             } else if (bot.alive == 3) {
-                g.setColor(Color.BLACK);
-                g.drawRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
+//                g.setColor(Color.BLACK);
+//                g.drawRect(x * World.BOTW, y * World.BOTH, World.BOTW, World.BOTH);
 
 //                    g.setColor(new Color(getBot(x, y).c_red, getBot(x, y).c_green, getBot(x, y).c_blue));
                 int green = (bot.c_green - ((bot.c_green * bot.health) / 2000));
@@ -68,7 +68,7 @@ public class ViewBasic implements IView
 				}
                 g.setColor(new Color(red, green, blue));
 //                    g.setColor(new Color(getBot(x, y).c_red, getBot(x, y).c_green, getBot(x, y).c_blue));
-                g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
+                g.fillRect(x * World.BOTW , y * World.BOTH , World.BOTW , World.BOTH );
                 world.population++;
             }
         }

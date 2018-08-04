@@ -4,7 +4,7 @@ import ru.cyberbiology.test.World;
 
 public interface IBot
 {
-	public static final int MIND_SIZE	= 64;
+	public static final int MIND_SIZE	= 256;
     /**
      * получение параметра для команды
      * 
@@ -47,6 +47,8 @@ public interface IBot
 	
 	public int seeBots(int drct, int i);
 	
+	public void command(int drct, int command);
+	
 	public int care(int drct, int i);
 	
 	
@@ -65,9 +67,10 @@ public interface IBot
 	public int fullAroud();
 	public int isHealthGrow();
 	public void mineral2Energy();
-	public void setMind(byte ma, byte mc);
+	public void setMind(int ma, int mc);
 	public void genAttack();
 	public IWorld getWorld();
 	void mutate();
+	void die();
 
 }

@@ -235,7 +235,7 @@ public class RecordManager extends AbstractRecordManager
 		int bot_mprev_y;
 		int bot_mnext_x;
 		int bot_mnext_y;
-		byte[] mind;
+		int[] mind;
 		
 		public Item(Bot bot, int x, int y)
 		{
@@ -267,7 +267,7 @@ public class RecordManager extends AbstractRecordManager
 			{
 				bot_mnext_x	= bot_mnext_y = -1;
 			}
-			mind	= new byte[bot.mind.length];
+			mind	= new int[bot.mind.length];
 			for(int i=0;i<bot.mind.length;i++)
 			{
 				mind[i] = bot.mind[i];

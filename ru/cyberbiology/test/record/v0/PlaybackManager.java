@@ -127,7 +127,7 @@ public class PlaybackManager
 						
 						for(int m=0;m<bot.mind.length;m++)
 						{
-							bot.mind[m]=(byte) in.readByte();
+							bot.mind[m]= in.readByte();
 							i++;
 						}
 						world.setBot(bot);
