@@ -117,13 +117,13 @@ public class World implements IWorld
 				} catch (InterruptedException e){
 					e.printStackTrace();
 				}
-//				synchronized (worker) {
+				synchronized (worker) {
 					try {
 						paint();
 					}catch (Throwable e){
 						e.printStackTrace();
 					}
-//				}
+				}
 			}
 		}
 	}
@@ -144,10 +144,10 @@ public class World implements IWorld
 					recorder.startFrame();
 				}
 				
-//				synchronized (this) {
+				synchronized (this) {
 					world.botList.addAll(world.botAddQueue);
 					world.botList.removeAll(world.botDelQueue);
-//				}
+				}
 				world.botAddQueue.clear();
 				world.botDelQueue.clear();
 				

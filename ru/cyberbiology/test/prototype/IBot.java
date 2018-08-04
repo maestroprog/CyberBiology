@@ -68,5 +68,6 @@ public interface IBot
 	public void setMind(byte ma, byte mc);
 	public void genAttack();
 	public IWorld getWorld();
+	void mutate();
 
 }

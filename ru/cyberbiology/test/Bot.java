@@ -761,7 +761,7 @@ public class Bot implements IBot, Cloneable {
             if (bot1.alive == LV_ALIVE) { // если там живой бот
                 bot.health = bot.health - 10; // то атакуюий бот теряет на атаку 10 энергии
                 if (bot.health > 0) {                    // если он при этом не умер
-                    bot1.mutate(bot);
+                    bot.mutate();
                 }
             }
         }
@@ -886,8 +886,9 @@ public class Bot implements IBot, Cloneable {
         int yt = yFromVektorR(bot, n);
 
         System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);
-    
-        mutate(newbot);
+		if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
+			newbot.mutate();
+		}
     
         newbot.adr = 0;                         // указатель текущей команды в новорожденном устанавливается в 0
         newbot.x = xt;
@@ -909,16 +910,15 @@ public class Bot implements IBot, Cloneable {
         world.addBot(newbot);
     }
     
-    private void mutate(Bot newbot) {
-        if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
-            byte bytes[] = new byte[2];
-            secureRandom.nextBytes(bytes);
-            byte ma = (byte) (int) ((bytes[0] & 0b01111111) % IBot.MIND_SIZE);
-            byte mc = (byte) (int) ((bytes[1] & 0b01111111) % IBot.MIND_SIZE);
+    @Override
+	public void mutate() {
+		byte bytes[] = new byte[2];
+		secureRandom.nextBytes(bytes);
+		byte ma = (byte) (int) ((bytes[0] & 0b01111111) % IBot.MIND_SIZE);
+		byte mc = (byte) (int) ((bytes[1] & 0b01111111) % IBot.MIND_SIZE);
 //            byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63
 //            byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
-            newbot.mind[ma] = mc;
-        }
+		mind[ma] = mc;
     }
     
     Bot clone(int x, int y) throws CloneNotSupportedException {
@@ -955,9 +955,9 @@ public class Bot implements IBot, Cloneable {
         int yt = yFromVektorR(bot, n);
 
         System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);    // копируем геном в нового бота
-    
-        mutate(newbot);
-    
+		if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
+			newbot.mutate();
+		}
         newbot.adr = 0;                         // указатель текущей команды в новорожденном устанавливается в 0
         newbot.x = xt;
         newbot.y = yt;

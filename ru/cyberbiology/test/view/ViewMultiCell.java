@@ -37,7 +37,7 @@ public class ViewMultiCell implements IView
 
         world.population = 0;
         world.organic = 0;
-        for (Bot bot: world.botList.toArray(new Bot[0])) {
+        for (Bot bot: world.botList) {
         	int x = bot.x;
         	int y = bot.y;
 			if ((bot.alive == 1) || (bot.alive == 2)) {
@@ -66,7 +66,21 @@ public class ViewMultiCell implements IView
 						if (green < 0) green = 0;
 						if (green > 255) green = 255;
 						int blue = (int) (bot.c_blue * 0.8 - ((bot.c_blue * bot.mineral) / 2000));
-						g.setColor(new Color(bot.c_red, green, blue));
+						
+						if (blue < 0)
+						{
+							blue = 0;
+						} else if (blue > 255)
+						{
+							blue = 255;
+						}
+						int red = bot.c_red;
+						if (red < 0) {
+							red = 0;
+						} else if (red > 255) {
+							red = 255;
+						}
+						g.setColor(new Color(red, green, blue));
 						g.fillRect(x * World.BOTW + 1, y * World.BOTH + 1, World.BOTW - 1, World.BOTH - 1);
 						break;
 				}
