@@ -46,8 +46,8 @@ public class MainWindow extends JFrame implements IWindow
 	
 	 public static MainWindow window;
 	
-	public static final int BOTW	= 4;
-	public static final int BOTH	= 4;
+	public static final int BOTW	= World.BOTW;
+	public static final int BOTH	= World.BOTH;
 	
     public static World world;
    // JPanel paintPanel = new JPanel(new FlowLayout());

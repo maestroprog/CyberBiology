@@ -23,15 +23,15 @@ import ru.cyberbiology.test.gene.GeneMyMineral;
 import ru.cyberbiology.test.gene.GenePhotosynthesis;
 import ru.cyberbiology.test.gene.GeneStepInAbsolutelyDirection;
 import ru.cyberbiology.test.gene.GeneStepInRelativeDirection;
-import ru.cyberbiology.test.gene.GeneСreateBot;
-import ru.cyberbiology.test.gene.GeneСreateCell;
+import ru.cyberbiology.test.gene.GeneCreateBot;
+import ru.cyberbiology.test.gene.GeneCreateCell;
 import ru.cyberbiology.test.prototype.IBot;
 import ru.cyberbiology.test.prototype.IWorld;
 import ru.cyberbiology.test.prototype.gene.IBotGeneController;
+import java.security.SecureRandom;
 
 
-public class Bot implements IBot
-{
+public class Bot implements IBot, Cloneable {
 
     public int adr;
     public int x;
@@ -46,7 +46,8 @@ public class Bot implements IBot
     public Bot mprev;
     public Bot mnext;
 
-    static IBotGeneController[] geneController= new IBotGeneController[64];
+    public static final int MIND_SIZE = IBot.MIND_SIZE; //Объем генома
+    static IBotGeneController[] geneController = new IBotGeneController[IBot.MIND_SIZE];
     static
     {
 	    geneController[23]	= new GeneChangeDirectionRelative(); //23 сменить направление относительно
@@ -74,8 +75,8 @@ public class Bot implements IBot
 	    geneController[37]	= new GeneMyLevel();//37 высота бота
 	    geneController[38]	= new GeneMyHealth();//38 здоровье бота
 	    geneController[39]	= new GeneMyMineral();//39 минералы бота
-	    geneController[40]	= new GeneСreateCell();//40 создать клетку многоклеточного
-	    geneController[41]	= new GeneСreateBot();//40 создать клетку одноклеточного
+	    geneController[40]	= new GeneCreateCell();//40 создать клетку многоклеточного
+	    geneController[41]	= new GeneCreateBot();//40 создать клетку одноклеточного
 	    //42 занято
 	    geneController[43]	= new GeneFullAroud();//43  окружен ли бот
 	    geneController[44]	= new GeneIsHealthGrow();//44  окружен ли бот
@@ -87,7 +88,6 @@ public class Bot implements IBot
 	    
     }
     
-    public static final int MIND_SIZE = 64; //Объем генома
     public byte[] mind = new byte[MIND_SIZE];                // геном бота содержит 64 команды
     
     //===================          BOT.LIVING                 ======================
@@ -117,6 +117,7 @@ public class Bot implements IBot
 	public int mprevY;
 	public int mnextX;
 	public int mnextY;
+    private SecureRandom secureRandom;
 
 	World world;
     public Bot(World world) {
@@ -126,6 +127,7 @@ public class Bot implements IBot
         alive = LV_ALIVE;
         //Class[] parameterTypes = new Class[] { Bot.class}; 
         //BotCommandController.class.getMethod(name, parameterTypes);
+        secureRandom = new SecureRandom();
     }
 
 
@@ -386,7 +388,7 @@ public class Bot implements IBot
             int xt = xFromVektorR(bot, i);
             int yt = yFromVektorR(bot, i);
             if ((yt >= 0) && (yt < world.height)) {
-                if (world.matrix[xt][yt] == null) {
+                if (!world.hasBot(xt, yt)) {
                     return 2;
                 }
             }
@@ -412,7 +414,7 @@ public class Bot implements IBot
             int xt = xFromVektorR(bot, i);
             int yt = yFromVektorR(bot, i);
             if ((yt >= 0) && (yt < world.height)) {
-                if (world.matrix[xt][yt] == null) {
+                if (!world.hasBot(xt, yt)) {
                     return i;
                 }
             }
@@ -525,10 +527,10 @@ public class Bot implements IBot
      * @param yt новые координаты y
      */
     void moveBot(Bot bot, int xt, int yt) {
-        world.matrix[xt][yt] = bot;
-        world.matrix[bot.x][bot.y] = null;
+        world.unsetBot(bot);
         bot.x = xt;
         bot.y = yt;
+        world.setBot(bot);
     }
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
@@ -545,7 +547,7 @@ public class Bot implements IBot
         if (nbot != null){ nbot.mprev = null; }
         bot.mprev = null;
         bot.mnext = null;
-        world.matrix[bot.x][bot.y] = null; // удаление бота с карты
+        world.clearBot(bot); // удаление бота с карты
     }
 
 
@@ -626,15 +628,16 @@ public class Bot implements IBot
         if ((yt < 0) || (yt >= world.height)) {  // если там ... стена
             return 3;                       // то возвращаем 3
         }
-        if (world.matrix[xt][yt] == null) {  // если клетка была пустая,
+        if (!world.hasBot(xt, yt)) {  // если клетка была пустая,
             moveBot(bot, xt, yt);    // то перемещаем бота
             return 2;                       // и функция возвращает 2
         }
         // осталось 2 варианта: ограника или бот
-        if (world.matrix[xt][yt].alive <= LV_ORGANIC_SINK) { // если на клетке находится органика
+        Bot bot1 = world.getBot(xt, yt);
+        if (bot1.alive <= LV_ORGANIC_SINK) { // если на клетке находится органика
             return 4;                       // то возвращаем 4
         }
-        if (isRelative(bot, world.matrix[xt][yt]) == 1) {  // если на клетке родня
+        if (isRelative(bot, bot1) == 1) {  // если на клетке родня
             return 6;                      // то возвращаем 6
         }
         return 5;                         // остался только один вариант - на клетке какой-то бот возвращаем 5
@@ -663,25 +666,26 @@ public class Bot implements IBot
         if ((yt < 0) || (yt >= world.height)) {  // если там стена возвращаем 3
             return 3;
         }
-        if (world.matrix[xt][yt] == null) {  // если клетка пустая возвращаем 2
+        Bot bot1 = world.getBot(xt, yt);
+        if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
             return 2;
         }
         // осталось 2 варианта: ограника или бот
-        else if (world.matrix[xt][yt].alive <= LV_ORGANIC_SINK) {   // если там оказалась органика
-            deleteBot(world.matrix[xt][yt]);                           // то удаляем её из списков
+        else if (bot1.alive <= LV_ORGANIC_SINK) {   // если там оказалась органика
+            deleteBot(bot1);                           // то удаляем её из списков
             bot.health = bot.health + 100; //здоровье увеличилось на 100
             goRed(this, 100);                                     // бот покраснел
             return 4;                                               // возвращаем 4
         }
         //--------- дошли до сюда, значит впереди живой бот -------------------
         int min0 = bot.mineral;  // определим количество минералов у бота
-        int min1 = world.matrix[xt][yt].mineral;  // определим количество минералов у потенциального обеда
-        int hl = world.matrix[xt][yt].health;  // определим энергию у потенциального обеда
+        int min1 = bot1.mineral;  // определим количество минералов у потенциального обеда
+        int hl = bot1.health;  // определим энергию у потенциального обеда
         // если у бота минералов больше
         if (min0 >= min1) {
             bot.mineral = min0 - min1; // количество минералов у бота уменьшается на количество минералов у жертвы
             // типа, стесал свои зубы о панцирь жертвы
-            deleteBot(world.matrix[xt][yt]);          // удаляем жертву из списков
+            deleteBot(bot1);          // удаляем жертву из списков
             int cl = 100 + (hl / 2);           // количество энергии у бота прибавляется на 100+(половина от энергии жертвы)
             bot.health = bot.health + cl;
             goRed(this, cl);                    // бот краснеет
@@ -690,11 +694,11 @@ public class Bot implements IBot
         //если у жертвы минералов больше ----------------------
         bot.mineral = 0; // то бот израсходовал все свои минералы на преодоление защиты
         min1 = min1 - min0;       // у жертвы количество минералов тоже уменьшилось
-        world.matrix[xt][yt].mineral = min1 - min0;       // перезаписали минералы жертве =========================ЗАПЛАТКА!!!!!!!!!!!!
+        bot1.mineral = min1 - min0;       // перезаписали минералы жертве =========================ЗАПЛАТКА!!!!!!!!!!!!
         //------ если здоровья в 2 раза больше, чем минералов у жертвы  ------
         //------ то здоровьем проламываем минералы ---------------------------
         if (bot.health >= 2 * min1) {
-            deleteBot(world.matrix[xt][yt]);         // удаляем жертву из списков
+            deleteBot(bot1);         // удаляем жертву из списков
             int cl = 100 + (hl / 2) - 2 * min1; // вычисляем, сколько энергии смог получить бот
             bot.health = bot.health + cl;
             if (cl < 0) { cl = 0; } //========================================================================================ЗАПЛАТКА!!!!!!!!!!! - энергия не должна быть отрицательной
@@ -703,7 +707,7 @@ public class Bot implements IBot
             return 5;                             // возвращаем 5
         }
         //--- если здоровья меньше, чем (минералов у жертвы)*2, то бот погибает от жертвы
-        world.matrix[xt][yt].mineral = min1 - (bot.health / 2);  // у жертвы минералы истраченны
+        bot1.mineral = min1 - (bot.health / 2);  // у жертвы минералы истраченны
         bot.health = 0;  // здоровье уходит в ноль
         return 5;                       // возвращаем 5
     }
@@ -729,14 +733,17 @@ public class Bot implements IBot
         }
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
-        } else if (world.matrix[xt][yt] == null) {  // если клетка пустая возвращаем 2
+        } else if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
             return 2;
-        } else if (world.matrix[xt][yt].alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
-            return 4;
-        } else if (isRelative(bot, world.matrix[xt][yt]) == 1) {  // если родня, то возвращаем 6
-            return 6;
-        } else { // если какой-то бот, то возвращаем 5
-            return 5;
+        } else {
+            Bot bot1 = world.getBot(xt, yt);
+            if (bot1.alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
+                return 4;
+            } else if (isRelative(bot, bot1) == 1) {  // если родня, то возвращаем 6
+                return 6;
+            } else { // если какой-то бот, то возвращаем 5
+                return 5;
+            }
         }
     }
 
@@ -749,13 +756,12 @@ public class Bot implements IBot
     void botGenAttack(Bot bot) {   // вычисляем кто у нас перед ботом (используется только относительное направление вперед)
         int xt = xFromVektorR(bot, 0);
         int yt = yFromVektorR(bot, 0);
-        if ((yt >= 0) && (yt < world.height) && (world.matrix[xt][yt] != null)) {
-            if (world.matrix[xt][yt].alive == LV_ALIVE) { // если там живой бот
+        if ((yt >= 0) && (yt < world.height) && (world.hasBot(xt, yt))) {
+            Bot bot1 = world.getBot(xt, yt);
+            if (bot1.alive == LV_ALIVE) { // если там живой бот
                 bot.health = bot.health - 10; // то атакуюий бот теряет на атаку 10 энергии
                 if (bot.health > 0) {                    // если он при этом не умер
-                	byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63 // то у жертвы случайным образом меняется один ген
-                	byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
-                    world.matrix[xt][yt].mind[ma] = mc;
+                    bot1.mutate(bot);
                 }
             }
         }
@@ -788,25 +794,26 @@ public class Bot implements IBot
         }
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
-        } else if (world.matrix[xt][yt] == null) {  // если клетка пустая возвращаем 2
+        } else if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
             return 2;
-        } else if (world.matrix[xt][yt].alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
+        } else if (world.getBot(xt, yt).alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
             return 4;
         }
+        Bot bot1 = world.getBot(xt, yt);
         //------- если мы здесь, то в данном направлении живой ----------
         int hlt0 = bot.health;         // определим количество энергии и минералов
-        int hlt1 = world.matrix[xt][yt].health;  // у бота и его соседа
+        int hlt1 = bot1.health;  // у бота и его соседа
         int min0 = bot.mineral;
-        int min1 = world.matrix[xt][yt].mineral;
+        int min1 = bot1.mineral;
         if (hlt0 > hlt1) {              // если у бота больше энергии, чем у соседа
             int hlt = (hlt0 - hlt1) / 2;   // то распределяем энергию поровну
             bot.health = bot.health - hlt;
-            world.matrix[xt][yt].health = world.matrix[xt][yt].health + hlt;
+            bot1.health = bot1.health + hlt;
         }
         if (min0 > min1) {              // если у бота больше минералов, чем у соседа
             int min = (min0 - min1) / 2;   // то распределяем их поровну
             bot.mineral = bot.mineral - min;
-            world.matrix[xt][yt].mineral = world.matrix[xt][yt].mineral + min;
+            bot1.mineral = bot1.mineral + min;
         }
         return 5;
     }
@@ -833,24 +840,25 @@ public class Bot implements IBot
         }
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
-        } else if (world.matrix[xt][yt] == null) {  // если клетка пустая возвращаем 2
+        } else if (!world.hasBot(xt, yt)) {  // если клетка пустая возвращаем 2
             return 2;
-        } else if (world.matrix[xt][yt].alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
+        } else if (world.getBot(xt, yt).alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
             return 4;
         }
+        Bot bot1 = world.getBot(xt, yt);
         //------- если мы здесь, то в данном направлении живой ----------
         int hlt0 = bot.health;  // бот отдает четверть своей энергии
         int hlt = hlt0 / 4;
         bot.health = hlt0 - hlt;
-        world.matrix[xt][yt].health = world.matrix[xt][yt].health + hlt;
+        bot1.health = bot1.health + hlt;
 
         int min0 = bot.mineral;  // бот отдает четверть своих минералов
         if (min0 > 3) {                 // только если их у него не меньше 4
             int min = min0 / 4;
             bot.mineral = min0 - min;
-            world.matrix[xt][yt].mineral = world.matrix[xt][yt].mineral + min;
-            if (world.matrix[xt][yt].mineral > 999) {
-                world.matrix[xt][yt].mineral = 999;
+            bot1.mineral = bot1.mineral + min;
+            if (bot1.mineral > 999) {
+                bot1.mineral = 999;
             }
         }
         return 5;
@@ -878,13 +886,9 @@ public class Bot implements IBot
         int yt = yFromVektorR(bot, n);
 
         System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);
-
-        if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
-            byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63
-            byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
-            newbot.mind[ma] = mc;
-        }
-
+    
+        mutate(newbot);
+    
         newbot.adr = 0;                         // указатель текущей команды в новорожденном устанавливается в 0
         newbot.x = xt;
         newbot.y = yt;
@@ -902,7 +906,29 @@ public class Bot implements IBot
 
         newbot.direction = (int) (Math.random() * 8);   // направление, куда повернут новорожденный, генерируется случайно
 
-        world.matrix[xt][yt] = newbot;    // отмечаем нового бота в массиве matrix
+        world.addBot(newbot);
+    }
+    
+    private void mutate(Bot newbot) {
+        if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
+            byte bytes[] = new byte[2];
+            secureRandom.nextBytes(bytes);
+            byte ma = (byte) (int) ((bytes[0] & 0b01111111) % IBot.MIND_SIZE);
+            byte mc = (byte) (int) ((bytes[1] & 0b01111111) % IBot.MIND_SIZE);
+//            byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63
+//            byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
+            newbot.mind[ma] = mc;
+        }
+    }
+    
+    Bot clone(int x, int y) throws CloneNotSupportedException {
+        Bot cloned = (Bot) super.clone();
+
+        cloned.x = x;
+        cloned.y = y;
+        cloned.mind[(int) (Math.random() * IBot.MIND_SIZE)] = (byte) (Math.random() * IBot.MIND_SIZE);
+
+        return cloned;
     }
 
     // ======       рождение новой клетки многоклеточного    ==========================================
@@ -929,13 +955,9 @@ public class Bot implements IBot
         int yt = yFromVektorR(bot, n);
 
         System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);    // копируем геном в нового бота
-
-        if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
-            byte ma = (byte) (Math.random() * MIND_SIZE);  // 0..63
-            byte mc = (byte) (Math.random() * MIND_SIZE);  // 0..63
-            newbot.mind[ma] = mc;
-        }
-
+    
+        mutate(newbot);
+    
         newbot.adr = 0;                         // указатель текущей команды в новорожденном устанавливается в 0
         newbot.x = xt;
         newbot.y = yt;
@@ -953,7 +975,7 @@ public class Bot implements IBot
 
         newbot.direction = (int) (Math.random() * 8);   // направление, куда повернут новорожденный, генерируется случайно
 
-        world.matrix[xt][yt] = newbot;    // отмечаем нового бота в массиве matrix
+        world.addBot(newbot);
 
         if (nbot == null) {                      // если у бота-предка ссылка на следующего бота в многоклеточной цепочке пуста
             bot.mnext = newbot; // то вставляем туда новорожденного бота
