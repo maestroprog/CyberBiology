@@ -8,7 +8,7 @@ public class GeneCommand extends ABotGeneController {
 	public boolean onGene(IBot bot) {
 		int param = bot.getParam();
 		for (int i = 0; i < 8; i++){
-			if (bot.seeBots(i, 0) >= 4) {
+			if (bot.seeBots(i, 1) >= 5) {
 				bot.command(i, param);
 			}
 		}

@@ -9,6 +9,7 @@ public class ListMatrix<T> {
 		bot = bots;
 		cache = new int[width][height];
 		this.height = height;
+		System.out.println("Размеры матрицы: " + width + " " + height);
 	}
 	
 	T get(int x, int y) {

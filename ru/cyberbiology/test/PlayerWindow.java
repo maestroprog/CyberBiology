@@ -44,8 +44,8 @@ public class PlayerWindow extends JFrame implements IWindow
 {
 	//public static PlayerWindow window;
 	
-	public static final int BOTW	= 4;
-	public static final int BOTH	= 4;
+	public static final int BOTW	= World.BOTW;
+	public static final int BOTH	= World.BOTH;
 	
     public static World world;
 

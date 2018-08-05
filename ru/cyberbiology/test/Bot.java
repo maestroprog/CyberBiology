@@ -121,10 +121,10 @@ public class Bot implements IBot, Cloneable {
     	}*/
     	if (alive == LV_ORGANIC_HOLD || alive == LV_ORGANIC_SINK)
 		  {
-			botMove(this, 5, 1);
+			botMove(5, 1);
               health -= Math.abs(world.sunEnergy) + 1;
-			if (health <= -100) {
-			    deleteBot(this);
+			if (health <= -999) {
+			    deleteBot();
             }
 		    	return;   //Это труп - выходим!
 		  }
@@ -133,13 +133,13 @@ public class Bot implements IBot, Cloneable {
     
         Integer prevAdr = null;
         int c = 0;
-        for (; ;)
+        for (; c < IBot.MIND_SIZE; c++)
         {//15
             if (prevAdr != null && prevAdr == adr) {
-                c++;
                 if (c > 64) {
                     System.out.println("Зависон detected, cmd " + mind[adr]);
-                    System.exit(1);
+//                    System.exit(1);
+                    this.botIncCommandAddress(1);
                 }
             }
             int command = mind[adr];  // текущая команда
@@ -153,7 +153,7 @@ public class Bot implements IBot, Cloneable {
             		break; // если обрабочик говорит, что он последний - завершаем цикл?
             }else
             {//если ни с одной команд не совпало значит безусловный переход прибавляем к указателю текущей команды значение команды
-            	 botIncCommandAddress(this, command);
+            	 this.botIncCommandAddress(command);
             	 break;
             }
         }
@@ -170,7 +170,7 @@ public class Bot implements IBot, Cloneable {
 
         if (alive == LV_ALIVE)
         {
-            int a = isMulti(this);
+            int a = isMulti();
             // распределяем энергию  минералы по многоклеточному организму
             // возможны три варианта, бот находится внутри цепочки
             // бот имеет предыдущего бота в цепочке и не имеет следующего
@@ -190,8 +190,8 @@ public class Bot implements IBot, Cloneable {
                     // если они не являются крайними, то распределяем энергию поровну       .........
                     // связанно это с тем, что в крайних ботах в цепочке должно быть больше энергии ..
                     // что бы они плодили новых ботов и удлиняли цепочку
-                int apb = isMulti(pb);
-                int anb = isMulti(nb);
+                int apb = pb.isMulti();
+                int anb = nb.isMulti();
                 if ((anb == 3) && (apb == 3)) { // если следующий и предыдущий боты не являются крайними
                                                  // то распределяем энергию поровну
                     int h =  health + nb.health + pb.health;
@@ -204,7 +204,7 @@ public class Bot implements IBot, Cloneable {
             // бот является крайним в цепочке и имеет предыдкщего бота
             if (a == 1) {
                 Bot pb = mprev; // ссылка на предыдущего бота
-                int apb = isMulti(pb);  // проверим, является ли предыдущий бот крайним в цепочке
+                int apb = pb.isMulti();  // проверим, является ли предыдущий бот крайним в цепочке
                 if (apb == 3) {   // если нет, то распределяем энергию в пользу текущего бота
                                    // так как он крайний и ему нужна энергия для роста цепочки
                     int h =  health + pb.health;
@@ -216,7 +216,7 @@ public class Bot implements IBot, Cloneable {
             // бот является крайним в цепочке и имеет следующего бота
             if (a == 2) {
                 Bot nb = mnext; // ссылка на следующего бота
-                int anb = isMulti(nb);   // проверим, является ли следующий бот крайним в цепочке
+                int anb = nb.isMulti();   // проверим, является ли следующий бот крайним в цепочке
                 if (anb == 3) {      // если нет, то распределяем энергию в пользу текущего бота
                                       // так как он крайний и ему нужна энергия для роста цепочки
                     int h =  health + nb.health;
@@ -239,16 +239,16 @@ public class Bot implements IBot, Cloneable {
             }*/
             health =  health - 3;   // каждый ход отнимает 3 единички здоровья(энегрии)
             if (health < 1) {       // если энергии стало меньше 1
-                bot2Organic(this);  // то время умирать, превращаясь в огранику
+                this.bot2Organic();  // то время умирать, превращаясь в огранику
                 return;            // и передаем управление к следующему боту
             }
             // если бот находится на глубине ниже 48 уровня
-            // то он автоматом накапливает минералы, но не более 499
+            // то он автоматом накапливает минералы, но не более 499/4
             if (y > world.height / 2) {
                 mineral = mineral + 1;
                 if (y > world.height / 6 * 4) { mineral = mineral + 1; }
                 if (y > world.height / 6 * 5) { mineral = mineral + 1; }
-                if (mineral > 499) { mineral = 499; }
+                if (mineral > 499/4) { mineral = 499/4; }
             }
         }
     }
@@ -267,13 +267,12 @@ public class Bot implements IBot, Cloneable {
     // out - X -  координата             --------------
     /**
      * получение Х-координаты рядом с био по относительному направлению
-     * @param bot
      * @param n направление
      * @return X -  координата 
      */
-    int xFromVektorR(Bot bot, int n) {
-        int xt = bot.x;
-        n = n + bot.direction;
+    int xFromVektorR(int n) {
+        int xt = x;
+        n = n + direction;
         if (n >= 8) {
             n = n - 8;
         }
@@ -298,12 +297,11 @@ public class Bot implements IBot, Cloneable {
     // out - X -  координата             --------------
     /**
      * получение Х-координаты рядом с био по абсолютному направлению
-     * @param bot
      * @param n
      * @return X -  координата
      */
-    int xFromVektorA(Bot bot, int n) {
-        int xt = bot.x;
+    int xFromVektorA(int n) {
+        int xt = x;
         if (n == 0 || n == 6 || n == 7) {
             xt = xt - 1;
             if (xt == -1) {
@@ -325,13 +323,12 @@ public class Bot implements IBot, Cloneable {
     // ---  out - Y -  координата                    -------------
     /**
      * получение Y-координаты рядом
-     * @param bot
      * @param n направление
      * @return Y координата по относительному направлению
      */
-    int yFromVektorR(Bot bot, int n) {
-        int yt = bot.y;
-        n = n + bot.direction;
+    int yFromVektorR(int n) {
+        int yt = y;
+        n = n + direction;
         if (n >= 8) {
             n = n - 8;
         }
@@ -350,12 +347,11 @@ public class Bot implements IBot, Cloneable {
     // ---  out - Y -  координата                    -------------
     /**
      * получение Y-координаты рядом 
-     * @param bot
      * @param n направление
      * @return Y координата по абсолютному направлению
      */
-    int yFromVektorA(Bot bot, int n) {
-        int yt = bot.y;
+    int yFromVektorA(int n) {
+        int yt = y;
         if (n == 0 || n == 1 || n == 2) {
             yt = yt - 1;
         } else if (n == 4 || n == 5 || n == 6) {
@@ -370,13 +366,13 @@ public class Bot implements IBot, Cloneable {
     //===== out  1-окружен  2-нет           ===
     /**
      * окружен ли бот 
-     * @param bot
      * @return 1-окружен  2-нет
      */
-    int fullAroud(Bot bot) {
+    @Override
+    public int fullAroud() {
         for (int i = 0; i < 8; i++) {
-            int xt = xFromVektorR(bot, i);
-            int yt = yFromVektorR(bot, i);
+            int xt = xFromVektorR(i);
+            int yt = yFromVektorR(i);
             if ((yt >= 0) && (yt < world.height)) {
                 if (!world.hasBot(xt, yt)) {
                     return 2;
@@ -396,13 +392,12 @@ public class Bot implements IBot, Cloneable {
     //====  или 8 , если свободных нет       ============
     /**
      * ищет свободные ячейки вокруг бота кругу через низ    ( world )
-     * @param bot
      * @return номер направление или 8 , если свободных нет
      */
-    int findEmptyDirection(Bot bot) {
+    int findEmptyDirection() {
         for (int i = 0; i < 8; i++) {
-            int xt = xFromVektorR(bot, i);
-            int yt = yFromVektorR(bot, i);
+            int xt = xFromVektorR(i);
+            int yt = yFromVektorR(i);
             if ((yt >= 0) && (yt < world.height)) {
                 if (!world.hasBot(xt, yt)) {
                     return i;
@@ -420,15 +415,14 @@ public class Bot implements IBot, Cloneable {
     /**
      * получение параметра для команды
      * 
-     * @param bot
      * @return возвращает число из днк, следующее за выполняемой командой
      */
-    int botGetParam(Bot bot) {
-        int paramadr = bot.adr + 1;
+    int botGetParam() {
+        int paramadr = adr + 1;
         if (paramadr >= MIND_SIZE) {
             paramadr = paramadr - MIND_SIZE;
         }
-        return bot.mind[paramadr]; // возвращает число, следующее за выполняемой командой
+        return mind[paramadr]; // возвращает число, следующее за выполняемой командой
     }
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
@@ -436,15 +430,14 @@ public class Bot implements IBot, Cloneable {
     //  in - bot, насколько прибавить адрес --
     /**
      * увеличение адреса команды
-     * @param bot
      * @param a насколько прибавить адрес
      */
-    void botIncCommandAddress(Bot bot, int a) {
-        int paramadr = bot.adr + a;
+    void botIncCommandAddress(int a) {
+        int paramadr = adr + a;
         if (paramadr >= MIND_SIZE) {
             paramadr = paramadr - MIND_SIZE;
         }
-        bot.adr = paramadr;
+        adr = paramadr;
     }
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
@@ -453,17 +446,16 @@ public class Bot implements IBot, Cloneable {
     //---- которая станет смещением              --------------
     /**
      * косвенное увеличение адреса команды
-     * 
-     * @param bot
+     *
      * @param a смещение до команды, которая станет смещением
      */
-    void botIndirectIncCmdAddress(Bot bot, int a) {
-        int paramadr = bot.adr + a;
+    void botIndirectIncCmdAddress(int a) {
+        int paramadr = adr + a;
         if (paramadr >= MIND_SIZE) {
             paramadr = paramadr - MIND_SIZE;
         }
-        int bias = bot.mind[paramadr];
-        botIncCommandAddress(bot, bias);
+        int bias = mind[paramadr];
+        botIncCommandAddress(bias);
     }
 
 
@@ -472,16 +464,15 @@ public class Bot implements IBot, Cloneable {
     //=====  in - номер бота                ===========
     /**
      * превращение бота в органику
-     * @param bot
      */
-    void bot2Organic(Bot bot) {
-        bot.alive = LV_ORGANIC_SINK;       // отметим в массиве bots[], что бот органика
-        Bot pbot = bot.mprev;
-        Bot nbot = bot.mnext;
+    void bot2Organic() {
+        alive = LV_ORGANIC_SINK;       // отметим в массиве bots[], что бот органика
+        Bot pbot = mprev;
+        Bot nbot = mnext;
         if (pbot != null){ pbot.mnext = null; } // удаление бота из многоклеточной цепочки
         if (nbot != null){ nbot.mprev = null; }
-        bot.mprev = null;
-        bot.mnext = null;
+        mprev = null;
+        mnext = null;
     }
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
@@ -491,15 +482,15 @@ public class Bot implements IBot, Cloneable {
     /**
      * нахожусь ли я в многоклеточной цепочке
      * 
-     * @param bot
      * @return 0 - нет, 1 - есть MPREV, 2 - есть MNEXT, 3 есть MPREV и MNEXT
      */
-    int isMulti(Bot bot) {
+    @Override
+    public int isMulti() {
         int a = 0;
-        if (bot.mprev != null) {
+        if (mprev != null) {
             a = 1;
         }
-        if (bot.mnext != null) {
+        if (mnext != null) {
             a = a + 2;
         }
         return a;
@@ -511,16 +502,14 @@ public class Bot implements IBot, Cloneable {
     //===== in - номер бота и новые координаты ===========
     /**
      * перемещает бота в нужную точку без проверок 
-     * 
-     * @param bot
-     * @param xt новые координаты x
+     *  @param xt новые координаты x
      * @param yt новые координаты y
      */
-    void moveBot(Bot bot, int xt, int yt) {
-        world.unsetBot(bot);
-        bot.x = xt;
-        bot.y = yt;
-        world.setBot(bot);
+    void moveBot(int xt, int yt) {
+        world.unsetBot(this);
+        x = xt;
+        y = yt;
+        world.setBot(this);
     }
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
@@ -528,16 +517,15 @@ public class Bot implements IBot, Cloneable {
     //=====  in - бот       =============
     /**
      * удаление бота
-     * @param bot
      */
-    public void deleteBot(Bot bot) {
-        Bot pbot = bot.mprev;
-        Bot nbot = bot.mnext;
+    private void deleteBot() {
+        Bot pbot = mprev;
+        Bot nbot = mnext;
         if (pbot != null){ pbot.mnext = null; } // удаление бота из многоклеточной цепочки
         if (nbot != null){ nbot.mprev = null; }
-        bot.mprev = null;
-        bot.mnext = null;
-        world.clearBot(bot); // удаление бота с карты
+        mprev = null;
+        mnext = null;
+        world.clearBot(this); // удаление бота с карты
     }
 
 
@@ -551,27 +539,26 @@ public class Bot implements IBot, Cloneable {
      * фотосинтез, этой командой забит геном первого бота 
      * бот получает энергию солнца в зависимости от глубины
      * и количества минералов, накопленных ботом
-     * 
-     * @param bot
+     *
      */
-    public void botEatSun(Bot bot) {
+    public void botEatSun() {
         int t;
-        if (bot.mineral < 100) {
+        if (mineral < 100) {
             t = 0;
-        } else if (bot.mineral < 400) {
+        } else if (mineral < 400) {
             t = 1;
         } else {
             t = 2;
         }
-        int hlt = (int)(world.sunEnergy * ((double)world.height / (bot.y + 1))) + t;
-        if (bot.health + hlt > 499) {
-            hlt -= (bot.health + hlt) - 499;
+        int hlt = (int)(world.sunEnergy * ((double)world.height / (y + 1))) + t;
+        if (health + hlt > 499) {
+            hlt -= (health + hlt) - 499;
         }
         // формула вычисления энергии ============================= SEZON!!!!!!!!!!
 //        System.out.println(world.generation + ": " + bot.health + " + " + hlt);
         if (hlt > 0) {
-            bot.health = bot.health + hlt;   // прибавляем полученную энергия к энергии бота
-            goGreen(bot, hlt);                                     // бот от этого зеленеет
+            health = health + hlt;   // прибавляем полученную энергия к энергии бота
+            goGreen(hlt);                                     // бот от этого зеленеет
         }
     }
 
@@ -579,45 +566,43 @@ public class Bot implements IBot, Cloneable {
     // ...  преобразование минералов в энергию  ...............
     /**
      *  преобразование минералов в энергию
-     * @param bot
      */
-    public void botMineral2Energy(Bot bot) {
+    public void botMineral2Energy() {
         //TODO стабилизировать минералы
-        if (bot.mineral > 100) {   // максимальное количество минералов, которые можно преобразовать в энергию = 100
-            bot.mineral = bot.mineral - 100;
-            bot.health = bot.health + 400; // 1 минерал = 4 энергии
-            goBlue(bot, 100);  // бот от этого синеет
+        if (mineral > 100) {   // максимальное количество минералов, которые можно преобразовать в энергию = 100
+            mineral = mineral - 100;
+            health = health + 400; // 1 минерал = 4 энергии
+            goBlue(100);  // бот от этого синеет
         } else {  // если минералов меньше 100, то все минералы переходят в энергию
-            goBlue(bot, bot.mineral);
-            bot.health = bot.health + 4 * bot.mineral;
-            bot.mineral = 0;
+            goBlue(mineral);
+            health = health + 4 * mineral;
+            mineral = 0;
         }
     }
 
     //===========================  перемещение бота   ========================================
     /**
      * перемещение бота
-     * @param bot ссылка на бота, 
      * @param direction направлелие
      * @param ra флажок(относительное или абсолютное направление)
      * @return
      */
-    public int botMove(Bot bot, int direction, int ra) { // ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
+    public int botMove(int direction, int ra) { // ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
         // на выходе   2-пусто  3-стена  4-органика 5-бот 6-родня
         int xt;
         int yt;
         if (ra == 0) {          // вычисляем координату клетки, куда перемещается бот (относительное направление)
-            xt = xFromVektorR(bot, direction);
-            yt = yFromVektorR(bot, direction);
+            xt = xFromVektorR(direction);
+            yt = yFromVektorR(direction);
         } else {                // вычисляем координату клетки, куда перемещается бот (абсолютное направление)
-            xt = xFromVektorA(bot, direction);
-            yt = yFromVektorA(bot, direction);
+            xt = xFromVektorA(direction);
+            yt = yFromVektorA(direction);
         }
         if ((yt < 0) || (yt >= world.height)) {  // если там ... стена
             return 3;                       // то возвращаем 3
         }
         if (!world.hasBot(xt, yt)) {  // если клетка была пустая,
-            moveBot(bot, xt, yt);    // то перемещаем бота
+            moveBot(xt, yt);    // то перемещаем бота
             return 2;                       // и функция возвращает 2
         }
         // осталось 2 варианта: ограника или бот
@@ -625,7 +610,7 @@ public class Bot implements IBot, Cloneable {
         if (bot1.alive <= LV_ORGANIC_SINK) { // если на клетке находится органика
             return 4;                       // то возвращаем 4
         }
-        if (isRelative(bot, bot1) == 1) {  // если на клетке родня
+        if (isRelative(this, bot1) == 1) {  // если на клетке родня
             return 6;                      // то возвращаем 6
         }
         return 5;                         // остался только один вариант - на клетке какой-то бот возвращаем 5
@@ -634,22 +619,21 @@ public class Bot implements IBot, Cloneable {
     //============================    скушать другого бота или органику  ==========================================
     /**
      * скушать другого бота или органику
-     * @param bot входе ссылка на бота
      * @param direction направлелие
      * @param ra флажок(относительное или абсолютное направление)
      * @return пусто - 2  стена - 3  органик - 4  бот - 5
      */
-    int botEat(Bot bot, int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
+    int botEat(int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
         // на выходе пусто - 2  стена - 3  органик - 4  бот - 5
-        bot.health = bot.health - 4; // бот теряет на этом 4 энергии в независимости от результата
+        health = health - 4; // бот теряет на этом 4 энергии в независимости от результата
         int xt;
         int yt;
         if (ra == 0) {  // вычисляем координату клетки, с которой хочет скушать бот (относительное направление)
-            xt = xFromVektorR(bot, direction);
-            yt = yFromVektorR(bot, direction);
+            xt = xFromVektorR(direction);
+            yt = yFromVektorR(direction);
         } else {        // вычисляем координату клетки, с которой хочет скушать бот (абсолютное направление)
-            xt = xFromVektorA(bot, direction);
-            yt = yFromVektorA(bot, direction);
+            xt = xFromVektorA(direction);
+            yt = yFromVektorA(direction);
         }
         if ((yt < 0) || (yt >= world.height)) {  // если там стена возвращаем 3
             return 3;
@@ -660,64 +644,63 @@ public class Bot implements IBot, Cloneable {
         }
         // осталось 2 варианта: ограника или бот
         else if (bot1.alive <= LV_ORGANIC_SINK) {   // если там оказалась органика
-            deleteBot(bot1);                           // то удаляем её из списков
-            bot.health = bot.health + bot1.health; //здоровье увеличилось на 100
-            goRed(this, bot1.health);                                     // бот покраснел
+            bot1.deleteBot();                           // то удаляем её из списков
+            health = health + bot1.health; //здоровье увеличилось на 100
+            goRed(bot1.health);                                     // бот покраснел
             return 4;                                               // возвращаем 4
         }
         //--------- дошли до сюда, значит впереди живой бот -------------------
-        int min0 = bot.mineral;  // определим количество минералов у бота
+        int min0 = mineral;  // определим количество минералов у бота
         int min1 = bot1.mineral;  // определим количество минералов у потенциального обеда
         int hl = bot1.health;  // определим энергию у потенциального обеда
         // если у бота минералов больше
         if (min0 >= min1) {
-            bot.mineral = min0 - min1; // количество минералов у бота уменьшается на количество минералов у жертвы
+            mineral = min0 - min1; // количество минералов у бота уменьшается на количество минералов у жертвы
             // типа, стесал свои зубы о панцирь жертвы
-            deleteBot(bot1);          // удаляем жертву из списков
+            bot1.deleteBot();          // удаляем жертву из списков
             int cl = 100 + (hl / 2);           // количество энергии у бота прибавляется на 100+(половина от энергии жертвы)
-            bot.health = bot.health + cl;
-            goRed(this, cl);                    // бот краснеет
+            health = health + cl;
+            goRed(cl);                    // бот краснеет
             return 5;                              // возвращаем 5
         }
         //если у жертвы минералов больше ----------------------
-        bot.mineral = 0; // то бот израсходовал все свои минералы на преодоление защиты
+        mineral = 0; // то бот израсходовал все свои минералы на преодоление защиты
         min1 = min1 - min0;       // у жертвы количество минералов тоже уменьшилось
         bot1.mineral = min1 - min0;       // перезаписали минералы жертве =========================ЗАПЛАТКА!!!!!!!!!!!!
         //------ если здоровья в 2 раза больше, чем минералов у жертвы  ------
         //------ то здоровьем проламываем минералы ---------------------------
-        if (bot.health >= 2 * min1) {
-            deleteBot(bot1);         // удаляем жертву из списков
+        if (health >= 2 * min1) {
+            bot1.deleteBot();         // удаляем жертву из списков
             int cl = 100 + (hl / 2) - 2 * min1; // вычисляем, сколько энергии смог получить бот
-            bot.health = bot.health + cl;
+            health = health + cl;
             if (cl < 0) { cl = 0; } //========================================================================================ЗАПЛАТКА!!!!!!!!!!! - энергия не должна быть отрицательной
 
-            goRed(this, cl);                   // бот краснеет
+            goRed(cl);                   // бот краснеет
             return 5;                             // возвращаем 5
         }
         //--- если здоровья меньше, чем (минералов у жертвы)*2, то бот погибает от жертвы
-        bot1.mineral = min1 - (bot.health / 2);  // у жертвы минералы истраченны
-        bot.health = 0;  // здоровье уходит в ноль
+        bot1.mineral = min1 - (health / 2);  // у жертвы минералы истраченны
+        health = 0;  // здоровье уходит в ноль
         return 5;                       // возвращаем 5
     }
 
     //.======================  посмотреть ==================================================
     /**
      * посмотреть 
-     * @param bot ссылка на бота
      * @param direction направлелие
      * @param ra флажок(относительное или абсолютное направление)
      * @return пусто - 2  стена - 3  органик - 4  бот - 5  родня - 6
      */
-    int botSeeBots(Bot bot, int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
+    int botSeeBots(int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
         // на выходе  пусто - 2  стена - 3  органик - 4  бот - 5  родня - 6
         int xt;
         int yt;
         if (ra == 0) {  // выясняем, есть ли что в этом  направлении (относительном)
-            xt = xFromVektorR(bot, direction);
-            yt = yFromVektorR(bot, direction);
+            xt = xFromVektorR(direction);
+            yt = yFromVektorR(direction);
         } else {       // выясняем, есть ли что в этом  направлении (абсолютном)
-            xt = xFromVektorA(bot, direction);
-            yt = yFromVektorA(bot, direction);
+            xt = xFromVektorA(direction);
+            yt = yFromVektorA(direction);
         }
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
             return 3;
@@ -727,7 +710,7 @@ public class Bot implements IBot, Cloneable {
             Bot bot1 = world.getBot(xt, yt);
             if (bot1.alive <= LV_ORGANIC_SINK) { // если органика возвращаем 4
                 return 4;
-            } else if (isRelative(bot, bot1) == 1) {  // если родня, то возвращаем 6
+            } else if (isRelative(this, bot1) == 1) {  // если родня, то возвращаем 6
                 return 6;
             } else { // если какой-то бот, то возвращаем 5
                 return 5;
@@ -739,17 +722,16 @@ public class Bot implements IBot, Cloneable {
     //======== атака на геном соседа, меняем случайны ген случайным образом  ===============
     /**
      * атака на геном соседа, меняем случайны ген случайным образом
-     * @param bot
      */
-    void botGenAttack(Bot bot) {   // вычисляем кто у нас перед ботом (используется только относительное направление вперед)
-        int xt = xFromVektorR(bot, 0);
-        int yt = yFromVektorR(bot, 0);
+    void botGenAttack() {   // вычисляем кто у нас перед ботом (используется только относительное направление вперед)
+        int xt = xFromVektorR(0);
+        int yt = yFromVektorR(0);
         if ((yt >= 0) && (yt < world.height) && (world.hasBot(xt, yt))) {
             Bot bot1 = world.getBot(xt, yt);
             if (bot1.alive == LV_ALIVE) { // если там живой бот
-                bot.health = bot.health - 10; // то атакуюий бот теряет на атаку 10 энергии
-                if (bot.health > 0) {                    // если он при этом не умер
-                    bot.mutate();
+                health = health - 10; // то атакуюий бот теряет на атаку 10 энергии
+                if (health > 0) {                    // если он при этом не умер
+                    mutate();
                 }
             }
         }
@@ -764,21 +746,20 @@ public class Bot implements IBot, Cloneable {
      * если у бота больше энергии или минералов, чем у соседа в заданном направлении
      * то бот делится излишками
      * 
-     * @param bot ссылка на бота
      * @param direction направлелие
      * @param ra флажок(относительное или абсолютное направление)
      * @return
      */
-    int botCare(Bot bot, int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
+    private int botCare(int direction, int ra) { // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
         // на выходе стена - 2 пусто - 3 органика - 4 удачно - 5
         int xt;
         int yt;
         if (ra == 0) {  // определяем координаты для относительного направления
-            xt = xFromVektorR(bot, direction);
-            yt = yFromVektorR(bot, direction);
+            xt = xFromVektorR(direction);
+            yt = yFromVektorR(direction);
         } else {        // определяем координаты для абсолютного направления
-            xt = xFromVektorA(bot, direction);
-            yt = yFromVektorA(bot, direction);
+            xt = xFromVektorA(direction);
+            yt = yFromVektorA(direction);
         }
         
         Bot bot1;
@@ -793,18 +774,18 @@ public class Bot implements IBot, Cloneable {
             }
         }
         //------- если мы здесь, то в данном направлении живой ----------
-        int hlt0 = bot.health;         // определим количество энергии и минералов
+        int hlt0 = health;         // определим количество энергии и минералов
         int hlt1 = bot1.health;  // у бота и его соседа
-        int min0 = bot.mineral;
+        int min0 = mineral;
         int min1 = bot1.mineral;
         if (hlt0 > hlt1) {              // если у бота больше энергии, чем у соседа
             int hlt = (hlt0 - hlt1) / 2;   // то распределяем энергию поровну
-            bot.health = bot.health - hlt;
+            health = health - hlt;
             bot1.health = bot1.health + hlt;
         }
         if (min0 > min1) {              // если у бота больше минералов, чем у соседа
             int min = (min0 - min1) / 2;   // то распределяем их поровну
-            bot.mineral = bot.mineral - min;
+            mineral = mineral - min;
             bot1.mineral = bot1.mineral + min;
         }
         return 5;
@@ -814,21 +795,20 @@ public class Bot implements IBot, Cloneable {
     //=================  отдать безвозместно, то есть даром    ==========
     /**
      * отдать безвозместно, то есть даром
-     * @param bot ссылка на бота
      * @param direction направлелие
      * @param ra флажок(относительное или абсолютное направление)
      * @return стена - 2 пусто - 3 органика - 4 удачно - 5
      */
-    int botGive(Bot bot, int direction, int ra) // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
+    int botGive(int direction, int ra) // на входе ссылка на бота, направлелие и флажок(относительное или абсолютное направление)
     {                         // на выходе стена - 2 пусто - 3 органика - 4 удачно - 5
         int xt;
         int yt;
         if (ra == 0) {  // определяем координаты для относительного направления
-            xt = xFromVektorR(bot, direction);
-            yt = yFromVektorR(bot, direction);
+            xt = xFromVektorR(direction);
+            yt = yFromVektorR(direction);
         } else {        // определяем координаты для абсолютного направления
-            xt = xFromVektorA(bot, direction);
-            yt = yFromVektorA(bot, direction);
+            xt = xFromVektorA(direction);
+            yt = yFromVektorA(direction);
         }
         Bot bot1 ;
         if (yt < 0 || yt >= world.height) {  // если там стена возвращаем 3
@@ -842,18 +822,18 @@ public class Bot implements IBot, Cloneable {
             }
         }
         //------- если мы здесь, то в данном направлении живой ----------
-        int hlt0 = bot.health;  // бот отдает четверть своей энергии
+        int hlt0 = health;  // бот отдает четверть своей энергии
         int hlt = hlt0 / 4;
-        bot.health = hlt0 - hlt;
+        health = hlt0 - hlt;
         bot1.health = bot1.health + hlt;
 
-        int min0 = bot.mineral;  // бот отдает четверть своих минералов
+        int min0 = mineral;  // бот отдает четверть своих минералов
         if (min0 > 3) {                 // только если их у него не меньше 4
             int min = min0 / 4;
-            bot.mineral = min0 - min;
+            mineral = min0 - min;
             bot1.mineral = bot1.mineral + min;
-            if (bot1.mineral > 499) {
-                bot1.mineral = 499;
+            if (bot1.mineral > 499/4) {
+                bot1.mineral = 499/4;
             }
         }
         return 5;
@@ -865,22 +845,22 @@ public class Bot implements IBot, Cloneable {
     /**
      * рождение нового бота делением
      */
-    private void botDouble(Bot bot) {
-        bot.health = bot.health - 150;      // бот затрачивает 150 единиц энергии на создание копии
-        if (bot.health <= 0) return; // если у него было меньше 150, то пора помирать
+    private void botDouble() {
+        health = health - 150;      // бот затрачивает 150 единиц энергии на создание копии
+        if (health <= 0) return; // если у него было меньше 150, то пора помирать
 
-        int n = findEmptyDirection(bot);    // проверим, окружен ли бот
+        int n = findEmptyDirection();    // проверим, окружен ли бот
         if (n == 8) {                      // если бот окружен, то он в муках погибает
-            bot.health = 0;
+            health = 0;
             return;
         }
 
         Bot newbot = new Bot(this.world);
 
-        int xt = xFromVektorR(bot, n);   // координаты X и Y
-        int yt = yFromVektorR(bot, n);
+        int xt = xFromVektorR(n);   // координаты X и Y
+        int yt = yFromVektorR(n);
 
-        System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);
+        System.arraycopy(mind, 0, newbot.mind, 0, MIND_SIZE);
 		if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
 			newbot.mutate();
 		}
@@ -889,16 +869,16 @@ public class Bot implements IBot, Cloneable {
         newbot.x = xt;
         newbot.y = yt;
 
-        newbot.health = bot.health / 2;   // забирается половина здоровья у предка
-        bot.health = bot.health / 2;
-        newbot.mineral = bot.mineral / 2; // забирается половина минералов у предка
-        bot.mineral = bot.mineral / 2;
+        newbot.health = health / 2;   // забирается половина здоровья у предка
+        health = health / 2;
+        newbot.mineral = mineral / 2; // забирается половина минералов у предка
+        mineral = mineral / 2;
 
         newbot.alive = LV_ALIVE;             // отмечаем, что бот живой
 
-        newbot.c_red = bot.c_red;   // цвет такой же, как у предка
-        newbot.c_green = bot.c_green;   // цвет такой же, как у предка
-        newbot.c_blue = bot.c_blue;   // цвет такой же, как у предка
+        newbot.c_red = c_red;   // цвет такой же, как у предка
+        newbot.c_green = c_green;   // цвет такой же, как у предка
+        newbot.c_blue = c_blue;   // цвет такой же, как у предка
 
         newbot.direction = (int) (Math.random() * 8);   // направление, куда повернут новорожденный, генерируется случайно
 
@@ -933,26 +913,26 @@ public class Bot implements IBot, Cloneable {
     /**
      * рождение новой клетки многоклеточного
      */
-    private void botMulti(Bot bot) {
-        Bot pbot = bot.mprev;    // ссылки на предыдущего и следущего в многоклеточной цепочке
-        Bot nbot = bot.mnext;
+    private void botMulti() {
+        Bot pbot = mprev;    // ссылки на предыдущего и следущего в многоклеточной цепочке
+        Bot nbot = mnext;
         // если обе ссылки больше 0, то бот уже внутри цепочки
         if ((pbot != null) && (nbot != null)) return; // поэтому выходим без создания нового бота
 
-        bot.health = bot.health - 150; // бот затрачивает 150 единиц энергии на создание копии
-        if (bot.health <= 0) return; // если у него было меньше 150, то пора помирать
-        int n = findEmptyDirection(bot); // проверим, окружен ли бот
+        health = health - 150; // бот затрачивает 150 единиц энергии на создание копии
+        if (health <= 0) return; // если у него было меньше 150, то пора помирать
+        int n = findEmptyDirection(); // проверим, окружен ли бот
 
         if (n == 8) {  // если бот окружен, то он в муках погибает
-            bot.health = 0;
+            health = 0;
             return;
         }
         Bot newbot = new Bot(this.world);
 
-        int xt = xFromVektorR(bot, n);   // координаты X и Y
-        int yt = yFromVektorR(bot, n);
+        int xt = xFromVektorR(n);   // координаты X и Y
+        int yt = yFromVektorR(n);
 
-        System.arraycopy(bot.mind, 0, newbot.mind, 0, MIND_SIZE);    // копируем геном в нового бота
+        System.arraycopy(mind, 0, newbot.mind, 0, MIND_SIZE);    // копируем геном в нового бота
 		if (Math.random() < 0.25) {     // в одном случае из четырех случайным образом меняем один случайный байт в геноме
 			newbot.mutate();
 		}
@@ -960,28 +940,28 @@ public class Bot implements IBot, Cloneable {
         newbot.x = xt;
         newbot.y = yt;
 
-        newbot.health = bot.health / 2;   // забирается половина здоровья у предка
-        bot.health = bot.health / 2;
-        newbot.mineral = bot.mineral / 2; // забирается половина минералов у предка
-        bot.mineral = bot.mineral / 2;
+        newbot.health = health / 2;   // забирается половина здоровья у предка
+        health = health / 2;
+        newbot.mineral = mineral / 2; // забирается половина минералов у предка
+        mineral = mineral / 2;
 
         newbot.alive = LV_ALIVE;             // отмечаем, что бот живой
 
-        newbot.c_red = bot.c_red;   // цвет такой же, как у предка
-        newbot.c_green = bot.c_green;   // цвет такой же, как у предка
-        newbot.c_blue = bot.c_blue;   // цвет такой же, как у предка
+        newbot.c_red = c_red;   // цвет такой же, как у предка
+        newbot.c_green = c_green;   // цвет такой же, как у предка
+        newbot.c_blue = c_blue;   // цвет такой же, как у предка
 
         newbot.direction = (int) (Math.random() * 8);   // направление, куда повернут новорожденный, генерируется случайно
 
         world.addBot(newbot);
 
         if (nbot == null) {                      // если у бота-предка ссылка на следующего бота в многоклеточной цепочке пуста
-            bot.mnext = newbot; // то вставляем туда новорожденного бота
-            newbot.mprev = bot;    // у новорожденного ссылка на предыдущего указывает на бота-предка
+            mnext = newbot; // то вставляем туда новорожденного бота
+            newbot.mprev = this;    // у новорожденного ссылка на предыдущего указывает на бота-предка
             newbot.mnext = null;       // ссылка на следующего пуста, новорожденный бот является крайним в цепочке
         } else {                              // если у бота-предка ссылка на предыдущего бота в многоклеточной цепочке пуста
-            bot.mprev = newbot; // то вставляем туда новорожденного бота
-            newbot.mnext = bot;    // у новорожденного ссылка на следующего указывает на бота-предка
+            mprev = newbot; // то вставляем туда новорожденного бота
+            newbot.mnext = this;    // у новорожденного ссылка на следующего указывает на бота-предка
             newbot.mprev = null;       // ссылка на предыдущего пуста, новорожденный бот является крайним в цепочке
         }
     }
@@ -993,21 +973,21 @@ public class Bot implements IBot, Cloneable {
     //========   out- 1 - да, 2 - нет           =====
     /**
      * копится ли энергия 
-     * @param bot
      * @return 1 - да, 2 - нет
      */
-    int isHealthGrow(Bot bot) {
+    @Override
+    public int isHealthGrow() {
         int t;
-        if (bot.mineral < 100) {
+        if (mineral < 100) {
             t = 0;
         } else {
-            if (bot.mineral < 400) {
+            if (mineral < 400) {
                 t = 1;
             } else {
                 t = 2;
             }
         }
-        int hlt = 10 - (15 * bot.y / world.height) + t; // ====================================================== SEZON!!!!!!!!!!!!!!!!!!
+        int hlt = 10 - (15 * y / world.height) + t; // ====================================================== SEZON!!!!!!!!!!!!!!!!!!
         if (hlt >= 3) {
             return 1;
         } else {
@@ -1046,30 +1026,29 @@ public class Bot implements IBot, Cloneable {
     //=== in - номер бота, на сколько озеленить       ======
     /**
      *  делаем бота более зеленым на экране
-     * @param bot
      * @param num номер бота, на сколько озеленить
      */
-    void goGreen(Bot bot, int num) {  // добавляем зелени
-        bot.c_green = bot.c_green + num;
-        if (bot.c_green + num > 255) {
-            bot.c_green = 255;
+    void goGreen(int num) {  // добавляем зелени
+        c_green = c_green + num;
+        if (c_green + num > 255) {
+            c_green = 255;
         }
         int nm = num / 2;
         // убавляем красноту
-        bot.c_red = bot.c_red - nm;
-        if (bot.c_red < 0) {
-            bot.c_blue = bot.c_blue +  bot.c_red;
+        c_red = c_red - nm;
+        if (c_red < 0) {
+            c_blue = c_blue +  c_red;
         }
         // убавляем синеву
-        bot.c_blue = bot.c_blue - nm;
-        if (bot.c_blue < 0 ) {
-            bot.c_red = bot.c_red + bot.c_blue;
+        c_blue = c_blue - nm;
+        if (c_blue < 0 ) {
+            c_red = c_red + c_blue;
         }
-        if (bot.c_red < 0) {
-            bot.c_red = 0;
+        if (c_red < 0) {
+            c_red = 0;
         }
-        if (bot.c_blue < 0) {
-            bot.c_blue = 0;
+        if (c_blue < 0) {
+            c_blue = 0;
         }
     }
 
@@ -1078,59 +1057,57 @@ public class Bot implements IBot, Cloneable {
     //=== in - номер бота, на сколько осинить       ======
     /**
      *  делаем бота более синим на экране
-     * @param bot
      * @param num номер бота, на сколько осинить
      */
-    void goBlue(Bot bot, int num) {  // добавляем синевы
-        bot.c_blue = bot.c_blue + num;
-        if (bot.c_blue > 255) {
-            bot.c_blue = 255;
+    void goBlue(int num) {  // добавляем синевы
+        c_blue = c_blue + num;
+        if (c_blue > 255) {
+            c_blue = 255;
         }
         int nm = num / 2;
         // убавляем зелень
-        bot.c_green = bot.c_green - nm;
-        if (bot.c_green < 0 ) {
-            bot.c_red = bot.c_red + bot.c_green;
+        c_green = c_green - nm;
+        if (c_green < 0 ) {
+            c_red = c_red + c_green;
         }
         // убавляем красноту
-        bot.c_red = bot.c_red - nm;
-        if (bot.c_red < 0) {
-            bot.c_green = bot.c_green +  bot.c_red;
+        c_red = c_red - nm;
+        if (c_red < 0) {
+            c_green = c_green +  c_red;
         }
-        if (bot.c_red < 0) {
-            bot.c_red = 0;
+        if (c_red < 0) {
+            c_red = 0;
         }
-        if (bot.c_green < 0) {
-            bot.c_green = 0;
+        if (c_green < 0) {
+            c_green = 0;
         }
     }
 
     /**
      *  делаем бота более красным на экране
-     * @param bot
      * @param num номер бота, на сколько окраснить
      */
-    void goRed(Bot bot, int num) {  // добавляем красноты
-        bot.c_red = bot.c_red + num;
-        if (bot.c_red > 255) {
-            bot.c_red = 255;
+    void goRed(int num) {  // добавляем красноты
+        c_red = c_red + num;
+        if (c_red > 255) {
+            c_red = 255;
         }
         int nm = num / 2;
         // убавляем зелень
-        bot.c_green = bot.c_green - nm;
-        if (bot.c_green < 0 ) {
-            bot.c_blue = bot.c_blue + bot.c_green;
+        c_green = c_green - nm;
+        if (c_green < 0 ) {
+            c_blue = c_blue + c_green;
         }
         // убавляем синеву
-        bot.c_blue = bot.c_blue - nm;
-        if (bot.c_blue < 0) {
-            bot.c_green = bot.c_green +  bot.c_blue;
+        c_blue = c_blue - nm;
+        if (c_blue < 0) {
+            c_green = c_green +  c_blue;
         }
-        if (bot.c_blue < 0) {
-            bot.c_blue = 0;
+        if (c_blue < 0) {
+            c_blue = 0;
         }
-        if (bot.c_green < 0) {
-            bot.c_green = 0;
+        if (c_green < 0) {
+            c_green = 0;
         }
     }
 
@@ -1139,7 +1116,7 @@ public class Bot implements IBot, Cloneable {
 	@Override
 	public int getParam()
 	{
-		return this.botGetParam(this);
+		return this.botGetParam();
 	}
 	@Override
 	public int getDirection()
@@ -1156,55 +1133,50 @@ public class Bot implements IBot, Cloneable {
 	@Override
 	public void incCommandAddress(int i)
 	{
-		botIncCommandAddress(this, i);
+		this.botIncCommandAddress(i);
 	}
 	@Override
 	public void eatSun()
 	{
-		botEatSun(this);
+		botEatSun();
 	}
 	@Override
 	public void indirectIncCmdAddress(int a)
 	{
-		botIndirectIncCmdAddress(this, a);
-	}
-	@Override
-	public int isMulti()
-	{
-		return isMulti(this);
+		botIndirectIncCmdAddress(a);
 	}
 	@Override
 	public int move(int drct, int i)
 	{
-		return this.botMove(this, drct, i);
+		return this.botMove(drct, i);
 	}
 	@Override
 	public int eat(int drct, int i)
 	{
-		return botEat(this, drct, i);
+		return botEat(drct, i);
 	}
 	@Override
 	public int seeBots(int drct, int i)
 	{
-		return botSeeBots(this, drct, i);
+		return botSeeBots(drct, i);
 	}
     
     @Override
     public void command(int drct, int command) {
-        int xt = xFromVektorR(this, drct);
-        int yt = yFromVektorR(this, drct);
-        this.world.getBot(xt, yt).adr = command;
+        int xt = this.xFromVektorA(drct);
+        int yt = this.yFromVektorA(drct);
+        world.getBot(xt, yt).adr = command;
     }
     
     @Override
 	public int care(int drct, int i)
 	{
-		return botCare(this, drct, i);
+		return botCare(drct, i);
 	}
 	@Override
 	public int give(int drct, int i)
 	{
-		return botGive(this, drct, i);
+		return botGive(drct, i);
 	}
 	public int getY()
 	{
@@ -1221,27 +1193,17 @@ public class Bot implements IBot, Cloneable {
 	@Override
 	public void Double()
 	{
-		this.botDouble(this);
+		this.botDouble();
 	}
 	@Override
 	public void multi()
 	{
-		this.botMulti(this);
-	}
-	@Override
-	public int fullAroud()
-	{
-		return fullAroud(this);
-	}
-	@Override
-	public int isHealthGrow()
-	{
-		return isHealthGrow(this);
+		this.botMulti();
 	}
 	@Override
 	public void mineral2Energy()
 	{
-		botMineral2Energy(this);
+		botMineral2Energy();
 	}
 	@Override
 	public void setMind(int ma, int mc)
@@ -1251,7 +1213,7 @@ public class Bot implements IBot, Cloneable {
 	@Override
 	public void genAttack()
 	{
-		this.botGenAttack(this);
+		this.botGenAttack();
 		
 	}
 }

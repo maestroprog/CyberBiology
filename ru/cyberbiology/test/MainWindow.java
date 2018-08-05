@@ -93,7 +93,7 @@ public class MainWindow extends JFrame implements IWindow,KeyListener
 
 		
         setTitle("CyberBiologyTest 1.0.0");
-		Dimension dimension = new Dimension(640, 480);
+		Dimension dimension = new Dimension(600, 600+(300-217));
 		setSize(dimension);
 //        Dimension sSize = Toolkit.getDefaultToolkit().getScreenSize(), fSize = getSize();
 //		Dimension sSize = dimension, fSize = dimension;
@@ -170,7 +170,7 @@ public class MainWindow extends JFrame implements IWindow,KeyListener
             	{
                 	int width = paintPanel.getWidth()/BOTW;// Ширина доступной части экрана для рисования карты
                 	int height = paintPanel.getHeight()/BOTH;// Боты 4 пикселя?
-	            	world = new World(window,width,height);
+	            	world = new World(window,width-1,height-1);
 	            	world.generateAdam();
 //	                paint();
             	}

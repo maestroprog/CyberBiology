@@ -17,8 +17,8 @@ public class World implements IWorld {
 	PlaybackManager playback;
 	IRecordManager recorder;
 	
-	public static final int BOTW = 2;
-	public static final int BOTH = 2;
+	public static final int BOTW = 1;
+	public static final int BOTH = 1;
 	
 	public int width;
 	public int height;
@@ -125,7 +125,11 @@ public class World implements IWorld {
 					if (bot == null) {
 						continue;
 					}
-					bot.step(); // выполняем шаг бота
+					try {
+						bot.step(); // выполняем шаг бота
+					} catch (Throwable e){
+						e.printStackTrace();
+					}
 					if (bot.alive <= Bot.LV_ORGANIC_SINK) {
 						calc_energy += bot.health;
 					} else {
@@ -235,7 +239,7 @@ public class World implements IWorld {
 	}
 	
 	public boolean hasBot(int botX, int botY) {
-		return this.bots.get(botX, botY) != null;
+		return this.bots.get(botX, botY) instanceof Bot;
 	}
 	
 	@Override
