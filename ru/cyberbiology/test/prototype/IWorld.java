@@ -6,20 +6,20 @@ import ru.cyberbiology.test.util.ProjectProperties;
 public interface IWorld
 {
 
-	public int getWidth();
+	int getWidth();
 
-	public int getHeight();
+	int getHeight();
 
-	public void setSize(int width, int height);
+	void setSize(int width, int height);
 
-	public void setBot(Bot bot);
+	void setBot(Bot bot);
 
-	public void paint();
+	void paint();
 
-	public ProjectProperties getProperties();
+	ProjectProperties getProperties();
 
-	public Bot[][] getWorldArray();
+	Bot[][] getWorldArray();
 
-	public void restoreLinks();
+	void restoreLinks();
 
 }

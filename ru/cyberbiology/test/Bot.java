@@ -93,9 +93,10 @@ public class Bot implements IBot, Cloneable {
 	public int mprevY;
 	public int mnextX;
 	public int mnextY;
-    private SecureRandom secureRandom;
+    static private SecureRandom secureRandom = new SecureRandom();
 
-	World world;
+	private World world;
+	
     public Bot(World world) {
     	this.world	= world;
         direction = 2;
@@ -103,7 +104,6 @@ public class Bot implements IBot, Cloneable {
         alive = LV_ALIVE;
         //Class[] parameterTypes = new Class[] { Bot.class}; 
         //BotCommandController.class.getMethod(name, parameterTypes);
-        secureRandom = new SecureRandom();
     }
 
 
@@ -122,8 +122,17 @@ public class Bot implements IBot, Cloneable {
     	if (alive == LV_ORGANIC_HOLD || alive == LV_ORGANIC_SINK)
 		  {
 			botMove(5, 1);
-              health -= Math.abs(world.sunEnergy) + 1;
+              health -= Math.abs(world.sunEnergy / (y / 15.0)) + 1;
 			if (health <= -999) {
+                if (Math.random() < 0.01) {
+                    // с какой-то малюсенькой вероятностью бот может воскреснуть, полностью мутировав
+                    health=999;
+                    alive = LV_ALIVE;
+                    for (int i = 0; i < IBot.MIND_SIZE; i++) {
+                        this.mutate();
+                    }
+                    return;
+                }
 			    deleteBot();
             }
 		    	return;   //Это труп - выходим!
@@ -131,34 +140,38 @@ public class Bot implements IBot, Cloneable {
 
         IBotGeneController cont;
     
-        Integer prevAdr = null;
-        int c = 0;
-        for (; c < IBot.MIND_SIZE; c++)
-        {//15
-            if (prevAdr != null && prevAdr == adr) {
-                if (c > 64) {
-                    System.out.println("Зависон detected, cmd " + mind[adr]);
-//                    System.exit(1);
-                    this.botIncCommandAddress(1);
-                }
-            }
-            int command = mind[adr];  // текущая команда
-            prevAdr=adr;
-            
-            // Получаем обработчика команды
-            cont	= geneController[command];
-            if(cont!=null)// если обработчик такой команды назначен
+        int command = mind[adr];  // текущая команда
+        
+        // Получаем обработчика команды
+        cont	= geneController[command];
+        if(cont!=null)// если обработчик такой команды назначен
+        {
+            if(cont.onGene(this)) // передаем ему управление
             {
-            	if(cont.onGene(this)) // передаем ему управление
-            		break; // если обрабочик говорит, что он последний - завершаем цикл?
-            }else
-            {//если ни с одной команд не совпало значит безусловный переход прибавляем к указателю текущей команды значение команды
-            	 this.botIncCommandAddress(command);
-            	 break;
+//                break; // если обрабочик говорит, что он последний - завершаем цикл?
             }
+        }else
+        {//если ни с одной команд не совпало значит безусловный переход прибавляем к указателю текущей команды значение команды
+             this.botIncCommandAddress(command);
         }
 
-
+        if (true)
+        {
+            health =  health - 3;   // каждый ход отнимает 3 единички здоровья(энегрии)
+            if (health < 1) {       // если энергии стало меньше 1
+                this.bot2Organic();  // то время умирать, превращаясь в огранику
+                return;            // и передаем управление к следующему боту
+            }
+            // если бот находится на глубине ниже 48 уровня
+            // то он автоматом накапливает минералы, но не более 499/4
+            if (y > world.height / 2) {
+                mineral = mineral + 1;
+                if (y > world.height / 6 * 4) { mineral = mineral + 1; }
+                if (y > world.height / 6 * 5) { mineral = mineral + 1; }
+                if (mineral > 499/4) { mineral = 499/4; }
+            }
+            return;
+        }
 
 //###########################################################################
 //.......  выход из функции и передача управления следующему боту   ........
@@ -257,8 +270,6 @@ public class Bot implements IBot, Cloneable {
 	{
 		return this.world;
 	}
-
-
 
     //жжжжжжжжжжжжжжжжжжжхжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж
     // -- получение Х-координаты рядом        ---------
@@ -645,7 +656,7 @@ public class Bot implements IBot, Cloneable {
         // осталось 2 варианта: ограника или бот
         else if (bot1.alive <= LV_ORGANIC_SINK) {   // если там оказалась органика
             bot1.deleteBot();                           // то удаляем её из списков
-            health = health + bot1.health; //здоровье увеличилось на 100
+            health = health + 100; //здоровье увеличилось на 100
             goRed(bot1.health);                                     // бот покраснел
             return 4;                                               // возвращаем 4
         }

@@ -1,76 +1,88 @@
 package ru.cyberbiology.test.prototype;
 
-import ru.cyberbiology.test.World;
-
-public interface IBot
-{
-	public static final int MIND_SIZE	= 256;
+public interface IBot {
+    
+    int MIND_SIZE = 256;
+    
     /**
      * получение параметра для команды
-     * 
+     *
      * @return возвращает число из днк, следующее за выполняемой командой
      */
-	public int getParam();
+    int getParam();
+    
     /**
      * получение направления движения
-     * 
+     *
      * @return возвращает число от 0 до 8 (0 вверх, 5 вниз)
      */
-	public int getDirection();
+    int getDirection();
+    
     /**
      * устанавливает направления движения
-     * 
+     *
      * @param newdrct число от 0 до 8 (0 вверх, 5 вниз)
      */
-	public void setDirection(int newdrct);
+    void setDirection(int newdrct);
+    
     /**
      * увеличение адреса команды
+     *
      * @param increment насколько прибавить адрес
      */
-	public void incCommandAddress(int increment);
-	/**
-	 * фотосинтез
-	 */
-	public void eatSun();
-	
-	/**
-	 * Многоклеточный ли бот?
-	 * @return
-	 */
-	public int isMulti();
-	
-	public int move(int drct, int i);
-	
-	public void indirectIncCmdAddress(int move);
-	
-	public int eat(int drct, int i);
-	
-	public int seeBots(int drct, int i);
-	
-	public void command(int drct, int command);
-	
-	public int care(int drct, int i);
-	
-	
-	public int give(int drct, int i);
-	
-	public int getY();
-	
-	public int getHealth();
-	
-	public int getMineral();
-	
-	public void Double();
-	
-	public void multi();
-	
-	public int fullAroud();
-	public int isHealthGrow();
-	public void mineral2Energy();
-	public void setMind(int ma, int mc);
-	public void genAttack();
-	public IWorld getWorld();
-	void mutate();
-	void die();
-
+    void incCommandAddress(int increment);
+    
+    /**
+     * фотосинтез
+     */
+    void eatSun();
+    
+    /**
+     * Многоклеточный ли бот?
+     *
+     * @return int
+     */
+    int isMulti();
+    
+    int move(int drct, int i);
+    
+    void indirectIncCmdAddress(int move);
+    
+    int eat(int drct, int i);
+    
+    int seeBots(int drct, int i);
+    
+    void command(int drct, int command);
+    
+    int care(int drct, int i);
+    
+    
+    int give(int drct, int i);
+    
+    int getY();
+    
+    int getHealth();
+    
+    int getMineral();
+    
+    void Double();
+    
+    void multi();
+    
+    int fullAroud();
+    
+    int isHealthGrow();
+    
+    void mineral2Energy();
+    
+    void setMind(int ma, int mc);
+    
+    void genAttack();
+    
+    IWorld getWorld();
+    
+    void mutate();
+    
+    void die();
+    
 }

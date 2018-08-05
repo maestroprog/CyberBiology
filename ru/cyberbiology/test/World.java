@@ -17,8 +17,8 @@ public class World implements IWorld {
 	PlaybackManager playback;
 	IRecordManager recorder;
 	
-	public static final int BOTW = 1;
-	public static final int BOTH = 1;
+	public static final int BOTW = 2;
+	public static final int BOTH = 2;
 	
 	public int width;
 	public int height;
@@ -107,7 +107,7 @@ public class World implements IWorld {
 	class Worker extends Thread {
 		public void run() {
 			allEnergy = width * height * 999;
-			double qenergy = (double)allEnergy / 15.0;
+			double qenergy = (double) allEnergy / 15.0;
 			started = true;// Флаг работы потока, если установить в false поток
 			// заканчивает работу
 			while (started) {
@@ -131,7 +131,7 @@ public class World implements IWorld {
 						e.printStackTrace();
 					}
 					if (bot.alive <= Bot.LV_ORGANIC_SINK) {
-						calc_energy += bot.health;
+						calc_energy += 100;
 					} else {
 						calc_energy += bot.mineral * 4 + bot.health;
 					}
@@ -151,7 +151,7 @@ public class World implements IWorld {
 				if (lockSun) {
 					sunEnergy = 0;
 				} else {
-					sunEnergy = (int) ((double) (allEnergy - calc_energy) / qenergy / 2);
+					sunEnergy = (int) ((double) (diffEnergy) / qenergy / 2);
 				}
 			}
 			paint();// если запаузили рисуем актуальную картинку
@@ -239,7 +239,7 @@ public class World implements IWorld {
 	}
 	
 	public boolean hasBot(int botX, int botY) {
-		return this.bots.get(botX, botY) instanceof Bot;
+		return this.bots.get(botX, botY) != null;
 	}
 	
 	@Override
@@ -269,7 +269,9 @@ public class World implements IWorld {
 	public Bot[][] getWorldArray() {
 		Bot[][] matrix = new Bot[width][height];
 		for (Bot bot : bots.toArray()) {
-			matrix[bot.x][bot.y] = bot;
+			if (bot != null) {
+				matrix[bot.x][bot.y] = bot;
+			}
 		}
 		return matrix;
 	}
